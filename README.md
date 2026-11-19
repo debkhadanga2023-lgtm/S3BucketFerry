@@ -35,7 +35,7 @@ offline). Nothing else needs installing.
 ## Install on Linux
 
 ```bash
-VER=<version>        # for example 0.3.7
+VER=<version>        # for example 0.3.8
 BASE=https://github.com/debkhadanga2023-lgtm/S3BucketFerry/releases/download/v$VER
 cd /tmp
 curl -fLO $BASE/s3bucketferry-$VER-linux-amd64.tar.gz
@@ -89,6 +89,9 @@ are in [CHANGELOG.md](CHANGELOG.md).
   SHA-256 digests of the bucket manifests.
 - **Live progress:** workers, throughput, copied, failed and pending counts,
   with failed objects listed by name.
+- **Stop and resume** at any time, also after a restart: objects already
+  copied are skipped, and with several workers, finished parts of the bucket
+  aren't listed again.
 - **Safe by design:** source objects are never changed or deleted. Objects on
   the target are deleted only in mirror mode, after a confirmation.
 - **No stored secrets:** profiles hold only the names of the environment

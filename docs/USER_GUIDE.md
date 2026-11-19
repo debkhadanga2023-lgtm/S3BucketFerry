@@ -1,6 +1,6 @@
 # S3BucketFerry User Guide
 
-Version 0.3.7
+Version 0.3.8
 
 S3BucketFerry ("S3 Bucket Ferry") copies buckets from one S3-compatible storage
 system to another, checks every object, and issues a migration certificate at
@@ -114,11 +114,11 @@ browser without internet access, and `USER_GUIDE.md`. Packages are on the
 
 | System | Package |
 |---|---|
-| Linux, Intel/AMD | `s3bucketferry-0.3.7-linux-amd64.tar.gz` |
-| Linux, ARM | `s3bucketferry-0.3.7-linux-arm64.tar.gz` |
-| Windows | `s3bucketferry-0.3.7-windows-amd64.zip` |
-| macOS, Intel | `s3bucketferry-0.3.7-macos-amd64.tar.gz` |
-| macOS, Apple silicon | `s3bucketferry-0.3.7-macos-arm64.tar.gz` |
+| Linux, Intel/AMD | `s3bucketferry-0.3.8-linux-amd64.tar.gz` |
+| Linux, ARM | `s3bucketferry-0.3.8-linux-arm64.tar.gz` |
+| Windows | `s3bucketferry-0.3.8-windows-amd64.zip` |
+| macOS, Intel | `s3bucketferry-0.3.8-macos-amd64.tar.gz` |
+| macOS, Apple silicon | `s3bucketferry-0.3.8-macos-arm64.tar.gz` |
 
 Every release also has `SHA256SUMS.txt`, which lets you confirm the download
 is complete and unaltered.
@@ -132,7 +132,7 @@ below and section 13.9. You never need Git.
 ### Linux
 
 ```bash
-VER=0.3.7
+VER=0.3.8
 BASE=https://github.com/debkhadanga2023-lgtm/S3BucketFerry/releases/download/v$VER
 cd /tmp
 curl -fLO $BASE/s3bucketferry-$VER-linux-amd64.tar.gz
@@ -154,7 +154,7 @@ which certificate to use.
 
 ### Windows
 
-1. Download `s3bucketferry-0.3.7-windows-amd64.zip`.
+1. Download `s3bucketferry-0.3.8-windows-amd64.zip`.
 2. Right-click the file, select **Extract All**, and extract to a folder such as
    `C:\S3BucketFerry`.
 3. Open **PowerShell** in that folder and run `.\s3bucketferry.exe version`.
@@ -176,8 +176,8 @@ installation.
 and download two files from the release you want:
 
 - the package for the S3BucketFerry machine, for example
-  `s3bucketferry-0.3.7-linux-amd64.tar.gz` or
-  `s3bucketferry-0.3.7-windows-amd64.zip`;
+  `s3bucketferry-0.3.8-linux-amd64.tar.gz` or
+  `s3bucketferry-0.3.8-windows-amd64.zip`;
 - `SHA256SUMS.txt`.
 
 Copy both to the S3BucketFerry machine, for example on a USB drive, over a file
@@ -188,9 +188,9 @@ the same folder.
 
 ```bash
 cd /tmp                                            # the folder you copied the two files to
-sha256sum -c --ignore-missing SHA256SUMS.txt       # must print: s3bucketferry-0.3.7-linux-amd64.tar.gz: OK
+sha256sum -c --ignore-missing SHA256SUMS.txt       # must print: s3bucketferry-0.3.8-linux-amd64.tar.gz: OK
 sudo mkdir -p /opt/s3bucketferry
-sudo tar -xzf s3bucketferry-0.3.7-linux-amd64.tar.gz -C /opt/s3bucketferry --strip-components=1
+sudo tar -xzf s3bucketferry-0.3.8-linux-amd64.tar.gz -C /opt/s3bucketferry --strip-components=1
 sudo ln -sf /opt/s3bucketferry/s3bucketferry /usr/local/bin/s3bucketferry
 s3bucketferry version
 s3bucketferry doctor
@@ -206,7 +206,7 @@ In PowerShell, in the folder you copied the two files to:
 
 ```powershell
 cd D:\                                                     # the folder with the two files
-(Get-FileHash .\s3bucketferry-0.3.7-windows-amd64.zip -Algorithm SHA256).Hash.ToLower()
+(Get-FileHash .\s3bucketferry-0.3.8-windows-amd64.zip -Algorithm SHA256).Hash.ToLower()
 Select-String -Path .\SHA256SUMS.txt -Pattern "windows-amd64.zip"
 ```
 
@@ -214,9 +214,9 @@ The two long values must be identical. (`certutil -hashfile <file> SHA256`
 shows the same value.) Then unpack the program into `C:\S3BucketFerry`:
 
 ```powershell
-Expand-Archive .\s3bucketferry-0.3.7-windows-amd64.zip -DestinationPath $env:TEMP\s3bf
+Expand-Archive .\s3bucketferry-0.3.8-windows-amd64.zip -DestinationPath $env:TEMP\s3bf
 New-Item -ItemType Directory -Force C:\S3BucketFerry | Out-Null
-Copy-Item $env:TEMP\s3bf\s3bucketferry-0.3.7-windows-amd64\* C:\S3BucketFerry -Recurse -Force
+Copy-Item $env:TEMP\s3bf\s3bucketferry-0.3.8-windows-amd64\* C:\S3BucketFerry -Recurse -Force
 cd C:\S3BucketFerry
 .\s3bucketferry.exe version
 .\s3bucketferry.exe doctor
@@ -898,6 +898,8 @@ spreadsheet.
 | Multipart part size, Parts uploaded in parallel | Tune how large objects are uploaded in parts. The defaults suit most cases. |
 | Canned ACL for copied objects | Apply one access setting, such as `private`, to every copied object. |
 | Target bucket already exists | Don't try to create the target bucket. Tick it when the target key may not create buckets. |
+| Skip the integrity check for this pass | Don't compare source and target after this copy. Saves a second full listing of both buckets on very large migrations; Cutover always checks everything. |
+| Low-memory listing | List the buckets prefix by prefix instead of all at once: slower, but needs much less memory. For buckets with millions of objects (see [Very large buckets](#very-large-buckets-millions-of-objects)). |
 | Mirror deletes | Also **delete** target objects that aren't in the source. A real run needs the confirmation box ticked too. |
 | Compress job logs and reports | Change when S3BucketFerry gzips its own log and report files (default: jobs above 10,000 objects). Bucket data is never compressed. |
 
@@ -918,7 +920,8 @@ compares source and target automatically. The job page then shows the result:
 ![Integrity check after the copy: PASSED](images/17b-integrity-check.png)
 
 **Stop** on the task page ends a running task. Objects already copied stay on
-the target; running the migration again continues where it stopped.
+the target, and **Resume** on the job's page continues where it stopped (see
+[Stop and resume](#stop-and-resume) in section 10).
 
 ### 8.5 Incremental passes
 
@@ -1064,13 +1067,15 @@ Run the same command again for each incremental pass. Common options:
 | `--no-check-bucket` | Don't try to create the target bucket |
 | `--mirror-deletes` | Also delete target objects that aren't in the source (rclone sync) |
 | `--no-verify` | Skip the comparison after the copy |
+| `--no-fast-list` | List prefix by prefix instead of the whole bucket at once: slower, much less memory (section 10, "Very large buckets") |
 | `--compress-above N` | Gzip this job's logs and reports above N objects (default 10000; 0 = always, -1 = never) |
 
 `--mirror-deletes` asks for no confirmation on the command line: typing it is
 the confirmation. Try it with `--dry-run` first.
 
-If a run is interrupted, `s3bucketferry resume <job id>` runs it again with the
-same settings.
+If a run stops (Ctrl+C) or fails part-way, `s3bucketferry resume <job id>`
+continues it with the same settings; `--full` checks the whole source again.
+See section 10, "Stop and resume".
 
 ### 9.4 Verify
 
@@ -1191,8 +1196,79 @@ during the copy:
 - **Download the full list** gives `logs/<job>.failed-objects.tsv`: one line
   per object, with its error.
 - An object that fails once but succeeds on a retry is not listed.
-- To retry them, fix the cause (here: bring the target back), then run the
-  same migration again or `resume` the job. Objects already copied are skipped.
+- To retry them, fix the cause (here: bring the target back), then select
+  **Resume** on the job's page (or `s3bucketferry resume <job id>`). Objects
+  already copied are skipped.
+
+### Stop and resume
+
+A migration can be stopped at any time and continued later, for example for a
+maintenance window, a network problem, or to free the network during office
+hours.
+
+- **Stop:** select **Stop** on the running task (**Activity**), or press
+  Ctrl+C on the command line. rclone finishes nothing new, objects already
+  copied stay on the target, and the job is marked **interrupted**.
+- **Resume:** open the job (**Jobs**) and select **Resume**, or run
+  `s3bucketferry resume <job id>`. It runs the migration again with the same
+  settings.
+- **Run again:** a job that completed shows **Run again** instead: an
+  incremental pass with the same settings.
+
+![Resume on the page of a stopped job](images/36-resume.png)
+
+**How a resume knows where to continue.** rclone keeps no checkpoint file.
+Instead, a resume lists both buckets and compares every object by size and
+checksum, as every pass does, and copies only what is missing or different.
+Objects that were copied completely are skipped, not copied again. An object
+that was being copied at the moment of the stop is copied again from the
+start. After the copy, the integrity check compares everything, as usual.
+There is no need for a separate dry run first: comparing is part of the copy.
+
+**Worker shares that finished are skipped.** With several workers, each
+worker copies a share of the source's top-level prefixes. When a job stops or
+fails part-way, S3BucketFerry records which shares finished, and a resume
+doesn't list them again, which saves a lot of time on very large buckets.
+Prefixes that appeared in the source since then are copied by an extra share.
+To check the finished shares again too, tick **Check the finished shares again
+too** (on the command line: `resume <job id> --full`). A resume of a job that
+completed always checks everything.
+
+**If the machine restarts or the program is killed** during a migration, the
+job is shown as **interrupted** the next time you look at it, and Resume works
+the same way. Shares that had finished before the restart are recorded as
+they finish, so they are skipped too. (On Windows the job keeps showing
+"running"; `s3bucketferry resume <job id>` still continues it.)
+
+There is no pause that freezes a copy in the middle: the storage systems would
+close the connections. Stop and Resume are the safe way to do it; the only
+work repeated is the objects that were half copied.
+
+### Very large buckets (millions of objects)
+
+The time a pass takes before copying, and the memory it needs, depend on the
+number of objects, not their size:
+
+- **Listing:** each list request returns up to 1,000 objects with their size
+  and checksum, so the objects aren't downloaded to compare them. A million
+  objects take about 1,000 requests per bucket. How long that takes depends on
+  the storage systems.
+- **Large objects uploaded in parts** don't carry a plain MD5 checksum in the
+  listing. rclone reads the checksum it stored for them with one extra request
+  per object.
+- **Twice per pass:** the copy lists both buckets, and the integrity check
+  lists them again. On intermediate passes, **Skip the integrity check for this
+  pass** (`--no-verify`) saves the second listing; Cutover always checks
+  everything.
+- **Memory:** to compare, rclone holds the listing in memory. rclone's own
+  documentation puts this at about 0.5 to 1 KB per object, so tens of millions
+  of objects in one listing need many gigabytes. To keep it down:
+  - use several **workers**: each lists only its share of the prefixes;
+  - tick **Low-memory listing** (`--no-fast-list`): the buckets are listed
+    prefix by prefix instead of all at once. It is slower, and it helps only
+    when the objects are spread over prefixes ("folders").
+- **Stop and resume** works the same at any size; with workers, a resume skips
+  the shares that finished.
 
 ### Job pages and downloads
 
@@ -1482,7 +1558,7 @@ upgrade.
 
 ```bash
 s3bucketferry version                                           # what you have now
-sudo s3bucketferry upgrade --package /tmp/s3bucketferry-0.3.7-linux-amd64.tar.gz
+sudo s3bucketferry upgrade --package /tmp/s3bucketferry-0.3.8-linux-amd64.tar.gz
 ```
 
 It works exactly like the online upgrade (13.3): it checks the package against
@@ -1521,9 +1597,9 @@ the copy is complete and unaltered.
 
 ```bash
 cd /tmp
-tar -xzf s3bucketferry-0.3.7-linux-amd64.tar.gz
-sudo bash s3bucketferry-0.3.7-linux-amd64/upgrade.sh --dir /opt/s3bucketferry \
-     --package /tmp/s3bucketferry-0.3.7-linux-amd64.tar.gz
+tar -xzf s3bucketferry-0.3.8-linux-amd64.tar.gz
+sudo bash s3bucketferry-0.3.8-linux-amd64/upgrade.sh --dir /opt/s3bucketferry \
+     --package /tmp/s3bucketferry-0.3.8-linux-amd64.tar.gz
 ```
 
 From then on use `sudo s3bucketferry upgrade --package ...`.
@@ -1540,7 +1616,7 @@ instead of downloaded. In PowerShell:
 
 ```powershell
 cd D:\                                                     # the folder with the copied files
-(Get-FileHash .\s3bucketferry-0.3.7-windows-amd64.zip -Algorithm SHA256).Hash.ToLower()
+(Get-FileHash .\s3bucketferry-0.3.8-windows-amd64.zip -Algorithm SHA256).Hash.ToLower()
 Select-String -Path .\SHA256SUMS.txt -Pattern "windows-amd64.zip"   # must show the same value
 ```
 
@@ -1549,8 +1625,8 @@ Stop the web interface (Ctrl+C in its window), then:
 ```powershell
 Remove-Item C:\S3BucketFerry.previous -Recurse -Force -ErrorAction SilentlyContinue
 Copy-Item C:\S3BucketFerry C:\S3BucketFerry.previous -Recurse           # your rollback copy
-Expand-Archive .\s3bucketferry-0.3.7-windows-amd64.zip -DestinationPath $env:TEMP\s3bf -Force
-Copy-Item $env:TEMP\s3bf\s3bucketferry-0.3.7-windows-amd64\* C:\S3BucketFerry -Recurse -Force
+Expand-Archive .\s3bucketferry-0.3.8-windows-amd64.zip -DestinationPath $env:TEMP\s3bf -Force
+Copy-Item $env:TEMP\s3bf\s3bucketferry-0.3.8-windows-amd64\* C:\S3BucketFerry -Recurse -Force
 C:\S3BucketFerry\s3bucketferry.exe version
 ```
 
@@ -1672,6 +1748,9 @@ versioning, lifecycle rules, bucket policies and Object Lock defaults.
 | `service setup`: `private key does not match public key` | The key file belongs to another certificate | Use the key that was created with the certificate. Nothing was changed. |
 | `service setup`: `the web interface did not answer` | The service didn't start | `sudo journalctl -u s3bucketferry-ui -n 30 --no-pager`. The previous service file is kept as `.bak-<date>-<time>` in `/etc/systemd/system`. |
 | Locked out of the web interface | 5 wrong passwords | Wait 15 minutes, or `s3bucketferry user unlock --name <user>`. |
+| A migration was stopped, or the machine restarted during one | The job is marked interrupted | Open the job and select **Resume**, or `s3bucketferry resume <job id>`. Objects already copied are skipped (section 10, "Stop and resume"). |
+| rclone is killed or the machine runs out of memory on a huge bucket | The listing of millions of objects doesn't fit in memory | Use several workers and **Low-memory listing** (`--no-fast-list`), then resume (section 10, "Very large buckets"). |
+| A pass takes a long time before copying anything | Both buckets are being listed and compared | Normal for millions of objects. Skip the integrity check on intermediate passes; with workers, a resume skips finished shares. |
 
 Logs: each job's rclone logs are in `logs/` in the state folder, and the web
 interface service logs with `sudo journalctl -u s3bucketferry-ui`.

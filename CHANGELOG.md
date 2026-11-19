@@ -1,5 +1,37 @@
 # Changelog
 
+## 0.3.8 - 2026-11-19
+
+- **Resume in the web interface.** The page of a stopped, failed or partly
+  failed migrate job has a **Resume** button; a completed job has **Run
+  again** (an incremental pass). It runs `resume` as a task, with the same
+  settings as the job.
+- **Resume skips finished worker shares.** With several workers, S3BucketFerry
+  records which shares of the source finished, the moment each one finishes. A
+  resume of a job that stopped or failed part-way doesn't list those shares
+  again, which saves a lot of time on very large buckets; prefixes added to the
+  source since then are copied by an extra share. `resume <id> --full` (or
+  **Check the finished shares again too**) checks everything. A resume of a
+  completed job always checks everything. The job summary shows "worker
+  shares: N of M finished".
+- **Jobs left behind by a crash or restart** are now shown as interrupted
+  (Linux and macOS), with a note, so they can be resumed. Previously they kept
+  showing "running".
+- **Low-memory listing for huge buckets:** `--no-fast-list` (web interface:
+  Advanced options > Low-memory listing) lists the buckets prefix by prefix
+  instead of all at once, for migrations and their integrity checks.
+- The web interface's "Skip the integrity check" option now explains that it
+  saves a second full listing on large migrations and that cutover always
+  checks everything.
+- User guide, section 10: new "Stop and resume" (with a screenshot) and "Very
+  large buckets (millions of objects)"; options tables, failed-object retry
+  and troubleshooting updated. Help page: new "Stop and resume" part and
+  troubleshooting rows.
+- Tests: resume after a partial failure skips the finished share and copies a
+  newly added prefix; `--full`; `--no-fast-list`; abandoned-job detection; the
+  web Resume button. Also tested by killing a migration with `kill -9` and
+  resuming it.
+
 ## 0.3.7 - 2026-11-19
 
 - **Separate public download repository.** The source code can now be kept in
