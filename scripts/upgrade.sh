@@ -178,7 +178,9 @@ writable_or_sudo() {
   local probe="$dir"
   [ -d "$probe" ] || probe=$(dirname "$dir")
   if [ ! -w "$probe" ]; then
-    die "no write access to $probe; run with sudo:  sudo $0 $orig_args"
+    # S3BF_UPGRADE_HINT is set by "s3bucketferry upgrade"; "bash" works even
+    # when this file has lost its execute permission.
+    die "no write access to $probe; run with sudo:  ${S3BF_UPGRADE_HINT:-sudo bash $0 $orig_args}"
   fi
 }
 
@@ -197,9 +199,17 @@ restart_service() {
   [ "${defer_restart:-no}" = yes ] && { restart_pending=yes; return 0; }
   if service_exists; then
     if [ "$(id -u)" -eq 0 ]; then
-      systemctl restart "$service" && say "  restarted the $service service" || warn "could not restart $service; check: sudo journalctl -u $service -n 30"
+      if systemctl restart "$service"; then
+        say "  restarted the $service service"
+      else
+        warn "could not restart $service; check: sudo journalctl -u $service -n 30"
+      fi
       sleep 1
-      systemctl is-active --quiet "$service" && say "  $service is running" || warn "$service is not running; check: sudo journalctl -u $service -n 30"
+      if systemctl is-active --quiet "$service"; then
+        say "  $service is running"
+      else
+        warn "$service is not running; check: sudo journalctl -u $service -n 30"
+      fi
     else
       say "  restart the web UI to use the new version:  sudo systemctl restart $service"
     fi
@@ -268,7 +278,7 @@ do_tool() {
   local f
   for f in "$tmp/$pkg"/*; do
     if [ -d "$f" ]; then # a folder in a future package: replace it whole
-      rm -rf "$dir/$(basename "$f")"
+      rm -rf "${dir:?}/$(basename "$f")"
       cp -R "$f" "$dir/"
       continue
     fi
@@ -313,7 +323,11 @@ do_rclone() {
 
   backup
   install -m 755 "$tmp/$name/rclone" "$dir/rclone"
-  curl -fsSL -o "$tmp/COPYING" "$RCLONE_RAW/$rn/COPYING" && install -m 644 "$tmp/COPYING" "$dir/RCLONE-LICENSE.txt" || warn "could not refresh RCLONE-LICENSE.txt"
+  if curl -fsSL -o "$tmp/COPYING" "$RCLONE_RAW/$rn/COPYING"; then
+    install -m 644 "$tmp/COPYING" "$dir/RCLONE-LICENSE.txt"
+  else
+    warn "could not refresh RCLONE-LICENSE.txt"
+  fi
   echo "$rn" > "$tmp/RCLONE-VERSION.txt" && install -m 644 "$tmp/RCLONE-VERSION.txt" "$dir/RCLONE-VERSION.txt"
   say "  installed: $("$dir/rclone" version | head -1)"
   restart_service

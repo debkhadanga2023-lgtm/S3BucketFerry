@@ -1,5 +1,40 @@
 # Changelog
 
+## 0.3.4 - 2026-11-19
+
+- **HTTPS by default for the web interface.** On a network address it now
+  serves HTTPS. Each install creates its own certificate authority and server
+  certificate on first start (ECDSA P-384, never shipped in the package); the
+  server certificate covers the host name, IP addresses and `localhost`, and
+  renews itself 30 days before expiry or when the names change. TLS 1.2 and 1.3
+  only, with forward-secret AEAD ciphers. The recommended address is
+  `--listen 0.0.0.0:8443` (HTTPS), next to 8080 for local HTTP; ports below
+  1024 such as 443 also work with `AmbientCapabilities=CAP_NET_BIND_SERVICE`.
+  New options `--tls auto|on|off`
+  and `--tls-hosts`; `--tls-cert`/`--tls-key` still use your own certificate,
+  which also turns on HSTS. New command `tls show|renew`. A clear message
+  explains how to allow ports below 1024. **Change:** a service listening on
+  `0.0.0.0:8080` now answers on `https://`; add `--tls off` to keep plain HTTP
+  (not recommended).
+- Help page: a new "Secure connection (HTTPS)" part and troubleshooting rows
+  for browser certificate warnings.
+- User guide, section 6: HTTPS, the service on port 8443, removing the browser warning
+  by trusting the CA on Windows, macOS, Linux and Firefox, certificate
+  maintenance, and using your own certificate.
+
+- Fixed: without write access, the upgrade suggested running `upgrade.sh`
+  directly, which fails when the file has no execute permission. It now
+  suggests `sudo s3bucketferry upgrade` with your options (or `sudo bash
+  upgrade.sh ...` when the script was run on its own).
+- Code quality: every ignored error is now explicit or handled (`report --out`
+  now reports a failed write when closing the file), shell scripts pass
+  shellcheck, and the guide builder passes ruff. CI has a new lint job:
+  golangci-lint (errcheck, govet, ineffassign, staticcheck, unused, gofmt),
+  shellcheck and ruff. Configuration in `.golangci.yml`.
+- Text written to files (the certificate's `.txt` and text reports) now goes
+  through a writer that keeps the first write error, so a failed write (for
+  example a full disk) makes the command fail instead of leaving a cut-off file.
+
 ## 0.3.3 - 2026-11-19
 
 - **User guide in the web interface.** A new **User guide** link under Support,

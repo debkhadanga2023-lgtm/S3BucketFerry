@@ -1,6 +1,6 @@
 # S3BucketFerry User Guide
 
-Version 0.3.3
+Version 0.3.4
 
 S3BucketFerry ("S3 Bucket Ferry") copies buckets from one S3-compatible storage
 system to another, checks every object, and issues a migration certificate at
@@ -35,8 +35,9 @@ the [glossary](#17-glossary) at the end.
 
 The screenshots and sample output in this guide come from real migrations
 between two test S3 servers, `source-s3.example.com` and `target-s3.example.com`,
-mostly made with version 0.3.2. The screens are the same in 0.3.3, except for
-the new **User guide** link. Your names, numbers and dates will differ.
+mostly made with version 0.3.2. The screens are the same in later versions,
+except for the **User guide** link added in 0.3.3. Since 0.3.4 the web interface
+uses HTTPS (section 6). Your names, numbers and dates will differ.
 
 This guide is also built into the web interface: **Support > User guide**.
 
@@ -113,11 +114,11 @@ browser without internet access, and `USER_GUIDE.md`. Packages are on the
 
 | System | Package |
 |---|---|
-| Linux, Intel/AMD | `s3bucketferry-0.3.3-linux-amd64.tar.gz` |
-| Linux, ARM | `s3bucketferry-0.3.3-linux-arm64.tar.gz` |
-| Windows | `s3bucketferry-0.3.3-windows-amd64.zip` |
-| macOS, Intel | `s3bucketferry-0.3.3-macos-amd64.tar.gz` |
-| macOS, Apple silicon | `s3bucketferry-0.3.3-macos-arm64.tar.gz` |
+| Linux, Intel/AMD | `s3bucketferry-0.3.4-linux-amd64.tar.gz` |
+| Linux, ARM | `s3bucketferry-0.3.4-linux-arm64.tar.gz` |
+| Windows | `s3bucketferry-0.3.4-windows-amd64.zip` |
+| macOS, Intel | `s3bucketferry-0.3.4-macos-amd64.tar.gz` |
+| macOS, Apple silicon | `s3bucketferry-0.3.4-macos-arm64.tar.gz` |
 
 Every release also has `SHA256SUMS.txt`, which lets you confirm the download
 is complete and unaltered.
@@ -125,7 +126,7 @@ is complete and unaltered.
 ### Linux
 
 ```bash
-VER=0.3.3
+VER=0.3.4
 BASE=https://github.com/debkhadanga2023-lgtm/S3BucketFerry/releases/download/v$VER
 cd /tmp
 curl -fLO $BASE/s3bucketferry-$VER-linux-amd64.tar.gz
@@ -142,7 +143,7 @@ On an ARM machine, use `linux-arm64` instead of `linux-amd64`.
 
 ### Windows
 
-1. Download `s3bucketferry-0.3.3-windows-amd64.zip`.
+1. Download `s3bucketferry-0.3.4-windows-amd64.zip`.
 2. Right-click the file, select **Extract All**, and extract to a folder such as
    `C:\S3BucketFerry`.
 3. Open **PowerShell** in that folder and run `.\s3bucketferry.exe version`.
@@ -363,24 +364,68 @@ In the web interface you choose the profile from a list and type the bucket
 The web interface runs on the S3BucketFerry machine. Start it in a session
 where the key variables are loaded.
 
+### Secure by default (HTTPS)
+
+When the web interface listens on a network address, it serves **HTTPS**, so
+passwords and pages are encrypted on the network. You don't need to buy or
+create a certificate: the first time it starts, each install creates its own:
+
+- a small **certificate authority** (CA) for this machine (`ca.crt`), valid
+  10 years;
+- a **server certificate** signed by that CA (`server.crt`), valid 397 days,
+  covering this machine's host name, its IP addresses and `localhost`.
+
+Both use **ECDSA P-384** keys (384-bit elliptic curve, about as strong as
+7680-bit RSA). Connections use **TLS 1.2 or 1.3** only, with forward-secret
+AES-GCM or ChaCha20 encryption; older protocols and weak ciphers are refused.
+The files are in the `tls` folder of the state folder, and the private keys
+can be read only by the user running the web interface.
+
+The keys are created on your machine and never leave it. No certificate ships
+inside the release package: a built-in certificate would share one private
+key with every other install, and anyone holding the package could
+impersonate or decrypt any server.
+
+When the web interface listens only on `127.0.0.1` (this machine), it uses
+plain HTTP, because nothing crosses the network.
+
+| Option | Use it to |
+|---|---|
+| `--listen 0.0.0.0:8443` | Serve HTTPS to other machines on port 8443, the recommended port (8080 stays for plain HTTP on this machine). |
+| `--tls-hosts NAMES` | Add host names or addresses to the certificate, comma separated, for example `ferry.example.com`. |
+| `--tls-cert FILE --tls-key FILE` | Use your own certificate (for example from your company's CA) instead of the generated one. |
+| `--tls on` | Serve HTTPS on `127.0.0.1` too. |
+| `--tls off` | Serve plain HTTP even on a network address. Not recommended: passwords would cross the network unencrypted. |
+
 ### For a quick test
 
 ```bash
-s3bucketferry ui                          # http://127.0.0.1:8080, this machine only
-s3bucketferry ui --listen 0.0.0.0:8080    # reachable from other machines
+s3bucketferry ui                              # http://127.0.0.1:8080, this machine only
+s3bucketferry ui --listen 0.0.0.0:8443        # https://<machine address>:8443, from other machines
 ```
 
-On Windows: `.\s3bucketferry.exe ui`. Press Ctrl+C to stop it.
+On Windows: `.\s3bucketferry.exe ui --listen 0.0.0.0:8443`. Press Ctrl+C to stop
+it.
 
-Without `--tls-cert` and `--tls-key` the interface uses plain HTTP, and it
-prints a warning when listening on a network address. On a shared network,
-serve HTTPS:
+At start, the web interface prints its certificate details (here on a test
+machine called `vm`):
 
-```bash
-s3bucketferry ui --listen 0.0.0.0:8443 --tls-cert server.crt --tls-key server.key
+```text
+created this install's certificate authority (ECDSA P-384)
+created a new server certificate
+certificate           : /home/ferry/.config/s3bucketferry/tls/server.crt
+valid until           : 2027-12-21
+host names            : ferry.example.com, localhost, vm
+IP addresses          : 127.0.0.1, 192.0.2.2, ::1
+SHA-256 fingerprint   : B1:89:C7:0B:A3:E3:98:7C:74:FA:6A:5A:93:00:E8:74:7D:74:5B:DB:CB:28:AC:4C:81:CB:F3:31:8B:8B:85:9D
+CA to trust           : /home/ferry/.config/s3bucketferry/tls/ca.crt
+CA SHA-256 fingerprint: 59:8D:8A:4C:6D:C2:F2:5A:40:23:CD:E5:15:FB:F0:BE:05:D7:1D:3A:FB:29:AD:14:48:A0:DF:19:43:EA:34:2E
+browsers warn about this certificate until they trust the CA above; see the User Guide, section 6
+created the initial user "s3admin" with the default password from the user guide; it must be changed at first login
+S3BucketFerry 0.3.4 web interface on https://<this machine's address>:8443 (Ctrl+C to stop)
 ```
 
-### As a service on Linux (recommended)
+### As a service on Linux, on port 8443 (recommended)
 
 A service starts at boot and keeps running when you log out. Run these as the
 user who will own the migrations, not as root.
@@ -394,13 +439,14 @@ user who will own the migrations, not as root.
    ```
 
 2. Check the port is free. If anything is printed, stop that program first; a
-   copy of `s3bucketferry ui` started by hand is the usual cause.
+   copy of `s3bucketferry ui` started by hand is the usual cause:
 
    ```bash
-   sudo ss -ltnp | grep ':8080'
+   sudo ss -ltnp | grep ':8443'
    ```
 
-3. Create the service. The file is filled in with your user name and home folder:
+3. Create the service. The file is filled in with your user name and home
+   folder. Add your server's DNS name to `--tls-hosts` if people will use one.
 
    ```bash
    sudo tee /etc/systemd/system/s3bucketferry-ui.service >/dev/null <<EOF
@@ -413,7 +459,7 @@ user who will own the migrations, not as root.
    User=$USER
    Environment=S3BF_HOME=$HOME/.config/s3bucketferry
    EnvironmentFile=-$HOME/.config/s3bf-keys.env
-   ExecStart=/opt/s3bucketferry/s3bucketferry ui --listen 0.0.0.0:8080
+   ExecStart=/opt/s3bucketferry/s3bucketferry ui --listen 0.0.0.0:8443 --tls-hosts ferry.example.com
    Restart=on-failure
 
    [Install]
@@ -426,12 +472,12 @@ user who will own the migrations, not as root.
    ```bash
    sudo systemctl daemon-reload
    sudo systemctl enable --now s3bucketferry-ui
-   sudo systemctl status s3bucketferry-ui --no-pager    # active (running)
-   curl -sI http://127.0.0.1:8080/login | head -1       # HTTP/1.1 200 OK
+   sudo systemctl status s3bucketferry-ui --no-pager                    # active (running)
+   curl -sI --cacert ~/.config/s3bucketferry/tls/ca.crt https://localhost:8443/login | head -1   # HTTP/1.1 200 OK
    ```
 
-5. If the firewall is on: `sudo ufw allow 8080/tcp` (Ubuntu) or
-   `sudo firewall-cmd --add-port=8080/tcp --permanent && sudo firewall-cmd --reload`
+5. If the firewall is on: `sudo ufw allow 8443/tcp` (Ubuntu) or
+   `sudo firewall-cmd --add-port=8443/tcp --permanent && sudo firewall-cmd --reload`
    (Red Hat family).
 
 6. Add `export S3BF_HOME=$HOME/.config/s3bucketferry` to `~/.bashrc`, so the
@@ -439,7 +485,76 @@ user who will own the migrations, not as root.
 
 After changing the keys file, run `sudo systemctl restart s3bucketferry-ui`.
 
-Then open `http://<machine address>:8080/login` in a browser.
+Then open **https://\<machine address\>:8443/login** in a browser.
+
+To use the standard HTTPS port 443 instead (so the address needs no port),
+use `--listen 0.0.0.0:443` and add the line
+`AmbientCapabilities=CAP_NET_BIND_SERVICE` under `[Service]`: Linux reserves
+ports below 1024 for root, and this line allows the service's user to use
+them.
+
+### The browser warning, and how to remove it
+
+Browsers don't know your machine's own CA, so the first visit shows a warning
+such as "Your connection is not private". The connection is still encrypted.
+You have two choices:
+
+- **Check and continue:** in the browser, view the certificate and compare its
+  SHA-256 fingerprint with the one the web interface printed (or
+  `s3bucketferry tls show`). If they match, select **Advanced > Proceed**.
+- **Trust the CA once** on each computer that uses the web interface: then
+  there's no warning, now or after the server certificate is renewed.
+
+Copy `ca.crt` from the server to your computer first, for example from
+PowerShell:
+
+```powershell
+scp s3admin@192.168.84.13:.config/s3bucketferry/tls/ca.crt .
+```
+
+Then add it to the computer's trusted certificate authorities:
+
+| Computer | How |
+|---|---|
+| Windows (Chrome, Edge) | PowerShell: `Import-Certificate -FilePath ca.crt -CertStoreLocation Cert:\CurrentUser\Root` and confirm. Or double-click `ca.crt` > **Install Certificate** > **Current User** > **Place all certificates in the following store** > **Trusted Root Certification Authorities**. |
+| macOS (Safari, Chrome) | `sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain ca.crt` |
+| Ubuntu / Debian | `sudo cp ca.crt /usr/local/share/ca-certificates/s3bucketferry.crt && sudo update-ca-certificates` |
+| Red Hat family | `sudo cp ca.crt /etc/pki/ca-trust/source/anchors/s3bucketferry.crt && sudo update-ca-trust` |
+| Firefox (any system) | **Settings > Privacy & Security > Certificates > View Certificates > Authorities > Import**, then tick **Trust this CA to identify websites**. |
+
+Restart the browser afterwards. Before trusting it, check that the CA
+fingerprint your computer shows matches `CA SHA-256 fingerprint` from
+`s3bucketferry tls show`. Trust only a `ca.crt` you copied from your own
+server.
+
+### Certificate maintenance
+
+Nothing is needed day to day:
+
+- At every start, the web interface renews the server certificate if it
+  expires within 30 days, or if the machine's host name or IP addresses have
+  changed. The CA stays the same, so trusted computers keep working.
+- `s3bucketferry tls show` prints the certificate's names, expiry and
+  fingerprints.
+- `s3bucketferry tls renew --hosts ferry.example.com` creates a new server
+  certificate now (restart the web interface afterwards).
+- To start over with a new CA, stop the web interface and delete the `tls`
+  folder in the state folder. Computers that trusted the old CA must trust the
+  new one.
+
+### Using your own certificate
+
+If your organisation can issue certificates, use one instead: browsers then
+trust it without any extra step, and S3BucketFerry also tells browsers to use
+HTTPS only for this server (HSTS).
+
+```bash
+s3bucketferry ui --listen 0.0.0.0:8443 --tls-cert /etc/s3bucketferry/ferry.crt --tls-key /etc/s3bucketferry/ferry.key
+```
+
+The certificate file can include the intermediate certificates after the
+server certificate. The key file must be readable by the user running the web
+interface.
 
 ## 7. First login and the menus
 
@@ -1055,6 +1170,22 @@ Go back to the previous install? [Y/n] y
 | `--dir FOLDER` | The install folder, if it isn't where `s3bucketferry` is found. |
 | `--service NAME` | The service to restart, if it isn't `s3bucketferry-ui`. |
 
+### Upgrading to 0.3.4: the web interface switches to HTTPS
+
+From 0.3.4, the web interface serves HTTPS whenever it listens on a network
+address (section 6). After upgrading, a service started with
+`--listen 0.0.0.0:8080` answers on **https**://\<machine address\>:8080; the old
+`http://` address shows `Client sent an HTTP request to an HTTPS server.`
+
+To move to the recommended HTTPS port 8443, change `--listen 0.0.0.0:8080` to
+`--listen 0.0.0.0:8443` in the service file (section 6, step 3), open port 8443
+in the firewall, then:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart s3bucketferry-ui
+```
+
 ### 13.7 Upgrading from 0.3.1
 
 Version 0.3.1 doesn't include the upgrade command yet. Download the script
@@ -1104,7 +1235,8 @@ To roll back, stop the web interface and copy the files from
 
 | Message | What to do |
 |---|---|
-| `no write access to /opt/s3bucketferry; run with sudo` | Run the command it shows, with `sudo`. |
+| `no write access to /opt/s3bucketferry; run with sudo` | Run the command it shows, with `sudo`: normally `sudo s3bucketferry upgrade`. |
+| `sudo: /opt/s3bucketferry/upgrade.sh: command not found` or `Permission denied` | The script has lost its execute permission (for example when copied from a Git checkout). Use `sudo s3bucketferry upgrade`, or `sudo bash /opt/s3bucketferry/upgrade.sh`; both work without it. |
 | `a migration is running` | Wait for it to finish (`pgrep -a rclone`). Use `--force` only if you are sure nothing is running. |
 | `could not find the newest release on GitHub` | No internet access, or GitHub's hourly limit was reached. Try later, or name the version with `--version`. |
 | `checksum mismatch ... nothing was changed` | The download was damaged or altered. Try again later. If it repeats, report it on GitHub; don't install that file by hand. |
@@ -1181,7 +1313,11 @@ versioning, lifecycle rules, bucket policies and Object Lock defaults.
 | Connection refused or timeouts | Wrong endpoint or port, firewall, or the storage is down | Test with `curl -I <endpoint>` from this machine. |
 | Many failed objects | Network or storage trouble during the run | Fix the cause, then run the migration again: only missing objects are copied. |
 | Certificate FAILED with checksum differences on large objects | The two systems compute checksums differently for objects uploaded in parts | Issue the certificate with **Full content check** (`--download`). |
-| Web interface not reachable | It is listening on 127.0.0.1, the port is taken, or the firewall blocks it | Use `--listen 0.0.0.0:8080`; check `sudo ss -ltnp \| grep 8080` and the firewall (section 6). |
+| Web interface not reachable | It is listening on 127.0.0.1, the port is taken, or the firewall blocks it | Use `--listen 0.0.0.0:8443`; check `sudo ss -ltnp \| grep 8443` and the firewall (section 6). |
+| Browser shows `Client sent an HTTP request to an HTTPS server.` | The address starts with `http://` | Use `https://`. |
+| Browser warns "Your connection is not private" (`NET::ERR_CERT_AUTHORITY_INVALID`) | The browser doesn't know this machine's CA yet | Compare the fingerprint and continue, or trust `ca.crt` (section 6). |
+| `NET::ERR_CERT_COMMON_NAME_INVALID` | You used a name or address the certificate doesn't cover | Add it: `s3bucketferry tls renew --hosts <name>`, or `--tls-hosts` on the service, then restart. |
+| `bind: permission denied` on a port below 1024 (such as 443) | Ports below 1024 need permission | Use 8443, or add `AmbientCapabilities=CAP_NET_BIND_SERVICE` to the service (section 6). |
 | Service fails at once (`status=1/FAILURE`) | Port in use, or part of `~/.config` belongs to root | `sudo journalctl -u s3bucketferry-ui -n 40`; see section 6 steps 1 and 2. |
 | Locked out of the web interface | 5 wrong passwords | Wait 15 minutes, or `s3bucketferry user unlock --name <user>`. |
 
