@@ -1,5 +1,41 @@
 # Changelog
 
+## 0.3.5 - 2026-11-19
+
+- **`service setup`: choose HTTP or HTTPS for the web interface service.**
+  `sudo s3bucketferry service setup` asks which user runs the service, whether
+  browsers connect over HTTPS on port 8443 (default) or plain HTTP on port
+  8080, the port, and which certificate HTTPS uses: the generated one (its file
+  names are shown: `tls/server.crt`, `tls/server.key`, `tls/ca.crt`, with
+  optional extra host names) or your own certificate and key. Your own files
+  are checked (key matches, not expired, warns before expiry and when the
+  certificate doesn't name the machine) and copied to `tls/own-server.crt` and
+  `tls/own-server.key`, owned by the service user. Setup then gives the state
+  folder and keys file to the service user, backs up the old service file,
+  writes `/etc/systemd/system/s3bucketferry-ui.service`, checks the port is
+  free, restarts the service, waits until it answers with the expected
+  certificate, prints the addresses and certificate details, and offers to
+  open the port in ufw or firewalld. Run it again to change any setting.
+  `--yes` with `--user`, `--protocol`, `--port`, `--address`, `--certificate`,
+  `--cert`, `--key`, `--tls-hosts`, `--firewall` and `--service` runs it
+  without questions. New `service show`.
+- **Upgrade:** after upgrading, `upgrade.sh` offers to run `service setup` for
+  a service it did not write (with `--yes`, it prints the command). Upgrading
+  from 0.3.4 runs 0.3.4's script, so run `sudo s3bucketferry service setup`
+  once afterwards to move a service on 8080 to HTTPS on 8443.
+- User guide: section 6 rewritten around `service setup`, with a sample run,
+  the questions and defaults, the certificate files, commands without
+  questions, and using your own certificate; the manual service file is kept
+  as an alternative. Install (section 3) points to it, section 13 has
+  "Upgrading to 0.3.5", and troubleshooting has rows for setup messages and a
+  service still on port 8080.
+- Help page: administrators switch between HTTPS and HTTP with `service
+  setup`; a troubleshooting row for an old port 8080 address.
+- Tests: `scripts/service-test.sh` runs setup against a stand-in systemctl
+  that really starts the web interface (0.3.4-style service to HTTPS on 8443,
+  HTTP on 8080, own certificate, back to generated, mismatched key, busy
+  port); run in CI. The upgrade test covers the setup offer.
+
 ## 0.3.4 - 2026-11-19
 
 - **HTTPS by default for the web interface.** On a network address it now

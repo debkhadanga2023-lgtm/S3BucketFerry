@@ -1,6 +1,6 @@
 # S3BucketFerry User Guide
 
-Version 0.3.4
+Version 0.3.5
 
 S3BucketFerry ("S3 Bucket Ferry") copies buckets from one S3-compatible storage
 system to another, checks every object, and issues a migration certificate at
@@ -37,7 +37,7 @@ The screenshots and sample output in this guide come from real migrations
 between two test S3 servers, `source-s3.example.com` and `target-s3.example.com`,
 mostly made with version 0.3.2. The screens are the same in later versions,
 except for the **User guide** link added in 0.3.3. Since 0.3.4 the web interface
-uses HTTPS (section 6). Your names, numbers and dates will differ.
+uses HTTPS (section 6), and since 0.3.5 `service setup` sets up its service. Your names, numbers and dates will differ.
 
 This guide is also built into the web interface: **Support > User guide**.
 
@@ -114,11 +114,11 @@ browser without internet access, and `USER_GUIDE.md`. Packages are on the
 
 | System | Package |
 |---|---|
-| Linux, Intel/AMD | `s3bucketferry-0.3.4-linux-amd64.tar.gz` |
-| Linux, ARM | `s3bucketferry-0.3.4-linux-arm64.tar.gz` |
-| Windows | `s3bucketferry-0.3.4-windows-amd64.zip` |
-| macOS, Intel | `s3bucketferry-0.3.4-macos-amd64.tar.gz` |
-| macOS, Apple silicon | `s3bucketferry-0.3.4-macos-arm64.tar.gz` |
+| Linux, Intel/AMD | `s3bucketferry-0.3.5-linux-amd64.tar.gz` |
+| Linux, ARM | `s3bucketferry-0.3.5-linux-arm64.tar.gz` |
+| Windows | `s3bucketferry-0.3.5-windows-amd64.zip` |
+| macOS, Intel | `s3bucketferry-0.3.5-macos-amd64.tar.gz` |
+| macOS, Apple silicon | `s3bucketferry-0.3.5-macos-arm64.tar.gz` |
 
 Every release also has `SHA256SUMS.txt`, which lets you confirm the download
 is complete and unaltered.
@@ -126,7 +126,7 @@ is complete and unaltered.
 ### Linux
 
 ```bash
-VER=0.3.4
+VER=0.3.5
 BASE=https://github.com/debkhadanga2023-lgtm/S3BucketFerry/releases/download/v$VER
 cd /tmp
 curl -fLO $BASE/s3bucketferry-$VER-linux-amd64.tar.gz
@@ -141,9 +141,14 @@ s3bucketferry version
 
 On an ARM machine, use `linux-arm64` instead of `linux-amd64`.
 
+To run the web interface as a service, which starts at boot, run
+`sudo s3bucketferry service setup` once the keys file is ready (section 6). It
+asks whether browsers connect over HTTPS on port 8443 or HTTP on port 8080, and
+which certificate to use.
+
 ### Windows
 
-1. Download `s3bucketferry-0.3.4-windows-amd64.zip`.
+1. Download `s3bucketferry-0.3.5-windows-amd64.zip`.
 2. Right-click the file, select **Extract All**, and extract to a folder such as
    `C:\S3BucketFerry`.
 3. Open **PowerShell** in that folder and run `.\s3bucketferry.exe version`.
@@ -422,13 +427,157 @@ CA to trust           : /home/ferry/.config/s3bucketferry/tls/ca.crt
 CA SHA-256 fingerprint: 59:8D:8A:4C:6D:C2:F2:5A:40:23:CD:E5:15:FB:F0:BE:05:D7:1D:3A:FB:29:AD:14:48:A0:DF:19:43:EA:34:2E
 browsers warn about this certificate until they trust the CA above; see the User Guide, section 6
 created the initial user "s3admin" with the default password from the user guide; it must be changed at first login
-S3BucketFerry 0.3.4 web interface on https://<this machine's address>:8443 (Ctrl+C to stop)
+S3BucketFerry 0.3.5 web interface on https://<this machine's address>:8443 (Ctrl+C to stop)
 ```
 
-### As a service on Linux, on port 8443 (recommended)
+### As a service on Linux (recommended)
 
-A service starts at boot and keeps running when you log out. Run these as the
-user who will own the migrations, not as root.
+A service starts at boot and keeps running when you log out. One command sets
+it up:
+
+```bash
+sudo s3bucketferry service setup
+```
+
+It asks four questions, and shows the answer it will use in brackets: press
+Enter to accept it.
+
+| Question | Default | Answer |
+|---|---|---|
+| Run the web interface as which user | The user who ran `sudo` | The account that runs the migrations. Not `root`. |
+| How should browsers connect | **1) HTTPS on port 8443** | Choose 2 for plain HTTP on port 8080. Use HTTP only on a network you trust: passwords would cross it unencrypted. |
+| Port | 8443 for HTTPS, 8080 for HTTP | Any free port. A port below 1024, such as 443, works too: setup adds the permission the service needs for it. |
+| Which certificate should HTTPS use | **1) The certificate this install creates for itself** | Choose 2 to use your own certificate and private key (see [Using your own certificate](#using-your-own-certificate)). |
+
+With the generated certificate, setup also asks for extra host names, for
+example the DNS name people will type (`ferry.example.com`). The machine's own
+host name and IP addresses are always included. The generated certificate is
+in the `tls` folder of the state folder:
+
+| File | What it is |
+|---|---|
+| `tls/server.crt` | The web interface's certificate |
+| `tls/server.key` | Its private key, readable only by the service user |
+| `tls/ca.crt` | This install's certificate authority: the file to trust on your computers, to remove the browser warning |
+
+Setup then shows a summary and asks once more. When you confirm, it:
+
+1. creates the state folder and the keys file, and gives them to the service
+   user (it fixes a `~/.config` folder created by `sudo` that belongs to root);
+2. keeps a copy of the existing service file, named
+   `s3bucketferry-ui.service.bak-<date>-<time>`, and writes the new one to
+   `/etc/systemd/system/s3bucketferry-ui.service`;
+3. stops the service and checks that no other program is using the port;
+4. starts the service, waits until it answers, and confirms it presents the
+   certificate you chose;
+5. prints the addresses to open, and the certificate's details;
+6. offers to open the port in the firewall (ufw or firewalld), if one is on.
+
+Here it moves a 0.3.4 service from port 8080 to HTTPS on 8443, with an extra
+host name. The answers are after each `:`; Enter accepts the default:
+
+```text
+$ sudo s3bucketferry service setup
+S3BucketFerry 0.3.5: web interface service setup
+service file: /etc/systemd/system/s3bucketferry-ui.service (exists; a backup is kept before it is replaced)
+now: HTTPS on port 8080, running as ferry
+
+Run the web interface as which user (the one who runs migrations) [ferry]:
+How should browsers connect to the web interface?
+  1) HTTPS on port 8443 (recommended: passwords and pages are encrypted)
+  2) HTTP on port 8080 (plain, not encrypted)
+Choose 1-2 [1]:
+Port [8443]:
+Which certificate should HTTPS use?
+  1) The certificate this install creates for itself (default)
+       certificate: /home/ferry/.config/s3bucketferry/tls/server.crt
+       private key: /home/ferry/.config/s3bucketferry/tls/server.key
+       CA to trust: /home/ferry/.config/s3bucketferry/tls/ca.crt
+  2) My own certificate and private key (PEM files, for example from your company's CA)
+Choose 1-2 [1]:
+Extra host names for the certificate, comma separated (for example ferry.example.com), or none [none]: ferry.example.com
+
+The service will be:
+  runs as       ferry
+  state folder  /home/ferry/.config/s3bucketferry
+  keys file     /home/ferry/.config/s3bf-keys.env
+  connection    HTTPS on 0.0.0.0:8443
+  certificate   generated: /home/ferry/.config/s3bucketferry/tls/server.crt
+Write the service and restart it? (Y/n):
+created the keys file /home/ferry/.config/s3bf-keys.env (mode 600); put the access keys in it (User Guide, section 4)
+gave ferry ownership of 66 file(s) and folder(s) in /home/ferry/.config
+backed up the old service file to /etc/systemd/system/s3bucketferry-ui.service.bak-20261119-114132
+wrote /etc/systemd/system/s3bucketferry-ui.service
+waiting for the web interface to answer on port 8443 ...
+the web interface is running (https://127.0.0.1:8443/login answers with the expected certificate)
+
+Open it in a browser at:
+  https://192.0.2.2:8443/login
+  https://ferry.example.com:8443/login
+
+certificate           : /home/ferry/.config/s3bucketferry/tls/server.crt
+valid until           : 2027-12-21
+host names            : ferry.example.com, localhost, vm
+IP addresses          : 127.0.0.1, 192.0.2.2, ::1
+SHA-256 fingerprint   : AC:4F:7C:F7:45:25:03:15:FA:CC:D5:EE:B2:09:12:27:37:59:06:31:0B:99:AE:1E:36:AF:62:71:0A:52:D5:B9
+CA to trust           : /home/ferry/.config/s3bucketferry/tls/ca.crt
+CA SHA-256 fingerprint: 3A:F5:E0:FE:66:E3:E4:6B:C5:55:57:EF:1A:8C:C2:75:AE:A9:E9:B2:30:DD:58:28:32:E2:86:00:B8:95:6D:D9
+browsers warn about this certificate until they trust the CA above (User Guide, section 6)
+
+the old address (https, port 8080) no longer answers; tell your users the new one
+```
+
+Then open the address it printed, for example
+**https://\<machine address\>:8443/login**, and continue with
+[the browser warning](#the-browser-warning-and-how-to-remove-it).
+
+Afterwards:
+
+- Put the access keys in the keys file it named (section 4), then
+  `sudo systemctl restart s3bucketferry-ui`.
+- Add `export S3BF_HOME=$HOME/.config/s3bucketferry` to `~/.bashrc`, so the
+  command line uses the same profiles and job history as the service.
+- To see the settings at any time: `s3bucketferry service show`.
+- To change them (HTTP or HTTPS, the port, the certificate, the user), run
+  `sudo s3bucketferry service setup` again. It starts from the current
+  settings, so you only change what you need.
+
+```text
+$ s3bucketferry service show
+service file: /etc/systemd/system/s3bucketferry-ui.service
+state       : active
+runs as     : ferry
+state folder: /home/ferry/.config/s3bucketferry
+connection  : HTTPS on port 8443
+certificate : generated, /home/ferry/.config/s3bucketferry/tls/server.crt (CA to trust: /home/ferry/.config/s3bucketferry/tls/ca.crt)
+address     : https://192.0.2.2:8443/login
+address     : https://ferry.example.com:8443/login
+```
+
+#### Without questions
+
+In a script, or with `--yes`, setup asks nothing. It uses the options you
+give, then the current settings, then the defaults (HTTPS on 8443 with the
+generated certificate).
+
+| Command | Sets up |
+|---|---|
+| `sudo s3bucketferry service setup --yes --user ferry` | HTTPS on 8443, generated certificate |
+| `sudo s3bucketferry service setup --yes --tls-hosts ferry.example.com` | The same, with an extra host name in the certificate |
+| `sudo s3bucketferry service setup --yes --protocol http` | Plain HTTP on 8080 |
+| `sudo s3bucketferry service setup --yes --cert /etc/pki/ferry.crt --key /etc/pki/ferry.key` | HTTPS on 8443 with your own certificate |
+| `sudo s3bucketferry service setup --yes --certificate generated` | Back to the generated certificate |
+| `sudo s3bucketferry service setup --yes --port 443` | HTTPS on the standard port 443 |
+
+Other options: `--address` (listen on one address only, default `0.0.0.0`:
+all of them), `--firewall ask|yes|no` (default `ask`) and `--service NAME` (the
+service name, default `s3bucketferry-ui`). `s3bucketferry service setup -h`
+lists them all.
+
+### Setting up the service by hand
+
+`service setup` writes the file below for you. To write it yourself instead,
+run these as the user who will own the migrations, not as root.
 
 1. Make sure your config folder belongs to you:
 
@@ -447,6 +596,7 @@ user who will own the migrations, not as root.
 
 3. Create the service. The file is filled in with your user name and home
    folder. Add your server's DNS name to `--tls-hosts` if people will use one.
+   For plain HTTP, use `--listen 0.0.0.0:8080 --tls off` instead.
 
    ```bash
    sudo tee /etc/systemd/system/s3bucketferry-ui.service >/dev/null <<EOF
@@ -459,7 +609,7 @@ user who will own the migrations, not as root.
    User=$USER
    Environment=S3BF_HOME=$HOME/.config/s3bucketferry
    EnvironmentFile=-$HOME/.config/s3bf-keys.env
-   ExecStart=/opt/s3bucketferry/s3bucketferry ui --listen 0.0.0.0:8443 --tls-hosts ferry.example.com
+   ExecStart=/opt/s3bucketferry/s3bucketferry ui --listen 0.0.0.0:8443 --tls on --tls-hosts ferry.example.com
    Restart=on-failure
 
    [Install]
@@ -480,12 +630,9 @@ user who will own the migrations, not as root.
    `sudo firewall-cmd --add-port=8443/tcp --permanent && sudo firewall-cmd --reload`
    (Red Hat family).
 
-6. Add `export S3BF_HOME=$HOME/.config/s3bucketferry` to `~/.bashrc`, so the
-   command line uses the same profiles and job history as the service.
+6. Add `export S3BF_HOME=$HOME/.config/s3bucketferry` to `~/.bashrc`.
 
 After changing the keys file, run `sudo systemctl restart s3bucketferry-ui`.
-
-Then open **https://\<machine address\>:8443/login** in a browser.
 
 To use the standard HTTPS port 443 instead (so the address needs no port),
 use `--listen 0.0.0.0:443` and add the line
@@ -548,13 +695,44 @@ If your organisation can issue certificates, use one instead: browsers then
 trust it without any extra step, and S3BucketFerry also tells browsers to use
 HTTPS only for this server (HSTS).
 
+You need two PEM files: the certificate (it can include the intermediate
+certificates after the server certificate) and its private key. The
+certificate should name the address people will use, such as
+`ferry.example.com`.
+
+For the service, run `sudo s3bucketferry service setup`, choose **2) My own
+certificate and private key**, and give the two file names:
+
+```text
+Which certificate should HTTPS use?
+  1) The certificate this install creates for itself (default)
+       ...
+  2) My own certificate and private key (PEM files, for example from your company's CA)
+Choose 1-2 [1]: 2
+Certificate file (PEM, may include the chain): /etc/pki/ferry.crt
+Private key file (PEM): /etc/pki/ferry.key
+  certificate for: ferry.example.com
+  issued by      : Example Corp Issuing CA
+  valid until    : 2027-06-07
+```
+
+Setup checks that the key belongs to the certificate and that the certificate
+hasn't expired, and warns if it expires within 30 days or doesn't name this
+machine. It then copies both files to the state folder's `tls` folder as
+`own-server.crt` and `own-server.key`, readable only by the service user, so
+the originals can stay where they are, owned by root. Without questions:
+`sudo s3bucketferry service setup --yes --cert /etc/pki/ferry.crt --key /etc/pki/ferry.key`.
+
+When your certificate is renewed, run the same command with the new files.
+To go back to the generated certificate:
+`sudo s3bucketferry service setup --yes --certificate generated`.
+
+Without the service, give the files to the `ui` command; the key file must be
+readable by the user running it:
+
 ```bash
 s3bucketferry ui --listen 0.0.0.0:8443 --tls-cert /etc/s3bucketferry/ferry.crt --tls-key /etc/s3bucketferry/ferry.key
 ```
-
-The certificate file can include the intermediate certificates after the
-server certificate. The key file must be readable by the user running the web
-interface.
 
 ## 7. First login and the menus
 
@@ -1043,7 +1221,10 @@ installs next to the program. It:
    (normally `/opt/s3bucketferry.previous`), for rollback;
 5. replaces the program files;
 6. restarts the `s3bucketferry-ui` service, if there is one, and checks it is
-   running.
+   running;
+7. if that service wasn't set up with `service setup` (section 6), offers to
+   run it, so you can choose HTTPS on 8443 or HTTP on 8080 and the
+   certificate. With `--yes`, it prints the command instead.
 
 Your profiles, jobs, reports, certificates, web users and keys file are in
 the state folder (section 14) and are never touched by an upgrade or a
@@ -1170,21 +1351,31 @@ Go back to the previous install? [Y/n] y
 | `--dir FOLDER` | The install folder, if it isn't where `s3bucketferry` is found. |
 | `--service NAME` | The service to restart, if it isn't `s3bucketferry-ui`. |
 
-### Upgrading to 0.3.4: the web interface switches to HTTPS
+To change how the web interface service runs (HTTP or HTTPS, the port, the
+certificate), use `sudo s3bucketferry service setup` (section 6). The upgrade
+leaves those settings as they are.
 
-From 0.3.4, the web interface serves HTTPS whenever it listens on a network
-address (section 6). After upgrading, a service started with
-`--listen 0.0.0.0:8080` answers on **https**://\<machine address\>:8080; the old
-`http://` address shows `Client sent an HTTP request to an HTTPS server.`
+### Upgrading to 0.3.5: choose HTTP or HTTPS for the service
 
-To move to the recommended HTTPS port 8443, change `--listen 0.0.0.0:8080` to
-`--listen 0.0.0.0:8443` in the service file (section 6, step 3), open port 8443
-in the firewall, then:
+Since 0.3.4, the web interface serves HTTPS whenever it listens on a network
+address. A service set up earlier with `--listen 0.0.0.0:8080` therefore answers
+on **https**://\<machine address\>:8080, and the old `http://` address shows
+`Client sent an HTTP request to an HTTPS server.`
+
+0.3.5 adds `service setup` to fix this in one step. After upgrading, run:
 
 ```bash
-sudo systemctl daemon-reload
-sudo systemctl restart s3bucketferry-ui
+sudo s3bucketferry upgrade
+sudo s3bucketferry service setup
 ```
+
+Choose **1) HTTPS** to move to port 8443 (recommended), or **2) HTTP** to keep
+plain HTTP on port 8080. For HTTPS, choose the generated certificate (press
+Enter) or your own. See section 6 for the questions and a sample run.
+
+The upgrade from 0.3.4 runs 0.3.4's `upgrade.sh`, which doesn't know about
+`service setup` yet, so run the second command yourself. From 0.3.5 on, the
+upgrade offers it when the service wasn't written by it.
 
 ### 13.7 Upgrading from 0.3.1
 
@@ -1318,7 +1509,12 @@ versioning, lifecycle rules, bucket policies and Object Lock defaults.
 | Browser warns "Your connection is not private" (`NET::ERR_CERT_AUTHORITY_INVALID`) | The browser doesn't know this machine's CA yet | Compare the fingerprint and continue, or trust `ca.crt` (section 6). |
 | `NET::ERR_CERT_COMMON_NAME_INVALID` | You used a name or address the certificate doesn't cover | Add it: `s3bucketferry tls renew --hosts <name>`, or `--tls-hosts` on the service, then restart. |
 | `bind: permission denied` on a port below 1024 (such as 443) | Ports below 1024 need permission | Use 8443, or add `AmbientCapabilities=CAP_NET_BIND_SERVICE` to the service (section 6). |
-| Service fails at once (`status=1/FAILURE`) | Port in use, or part of `~/.config` belongs to root | `sudo journalctl -u s3bucketferry-ui -n 40`; see section 6 steps 1 and 2. |
+| Service fails at once (`status=1/FAILURE`) | Port in use, or part of `~/.config` belongs to root | Run `sudo s3bucketferry service setup`: it fixes the folder owner and checks the port. Details: `sudo journalctl -u s3bucketferry-ui -n 40`. |
+| Still listening on port 8080 after upgrading | The service file still says `--listen 0.0.0.0:8080` | `sudo s3bucketferry service setup` and choose HTTPS on 8443 (section 13, "Upgrading to 0.3.5"). |
+| `service setup`: `cannot write /etc/systemd/system ... run with sudo` | It was run without sudo | `sudo s3bucketferry service setup`. |
+| `service setup`: `port 8443 is in use by another program` | Usually a copy of `s3bucketferry ui` started by hand | Stop it (`pgrep -af "s3bucketferry ui"`, then `kill <pid>`), then `sudo systemctl restart s3bucketferry-ui`. |
+| `service setup`: `private key does not match public key` | The key file belongs to another certificate | Use the key that was created with the certificate. Nothing was changed. |
+| `service setup`: `the web interface did not answer` | The service didn't start | `sudo journalctl -u s3bucketferry-ui -n 30 --no-pager`. The previous service file is kept as `.bak-<date>-<time>` in `/etc/systemd/system`. |
 | Locked out of the web interface | 5 wrong passwords | Wait 15 minutes, or `s3bucketferry user unlock --name <user>`. |
 
 Logs: each job's rclone logs are in `logs/` in the state folder, and the web

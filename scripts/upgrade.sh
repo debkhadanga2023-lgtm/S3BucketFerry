@@ -216,6 +216,34 @@ restart_service() {
   fi
 }
 
+# The web interface service can be set up with "s3bucketferry service setup"
+# (0.3.5 and later): HTTPS on 8443 or HTTP on 8080, and which certificate.
+# After an upgrade, offer it for a service that was not written by it.
+offer_service_setup() {
+  service_exists || return 0
+  [ -x "$dir/s3bucketferry" ] || return 0
+  "$dir/s3bucketferry" --help 2>/dev/null | grep -q "service setup" || return 0
+  local unit
+  unit=$(systemctl show -p FragmentPath --value "$service" 2>/dev/null || true)
+  [ -n "$unit" ] && [ -r "$unit" ] || return 0
+  grep -q 'Written by "s3bucketferry service setup"' "$unit" && return 0
+  say
+  say "The $service service can now be set up with one command: HTTPS on port 8443"
+  say "(recommended) or HTTP on port 8080, with the generated certificate or your own."
+  if [ "$yes" = yes ] || [ ! -t 0 ] || [ "$(id -u)" -ne 0 ]; then
+    say "  to set it up:  sudo s3bucketferry service setup"
+    return 0
+  fi
+  local a
+  read -r -p "Set it up now? [Y/n] " a || a=n
+  case "$a" in
+    ""|y|Y|yes|YES) ;;
+    *) say "  to set it up later:  sudo s3bucketferry service setup"; return 0 ;;
+  esac
+  "$dir/s3bucketferry" service setup --service "$service" \
+    || warn "service setup did not finish; run it again with:  sudo s3bucketferry service setup"
+}
+
 # ---- the steps ----------------------------------------------------------
 
 do_check() {
@@ -353,7 +381,7 @@ need curl tar awk sed sort
 dir=$(find_dir)
 case "$mode" in
   check) do_check ;;
-  tool) do_tool ;;
+  tool) do_tool; offer_service_setup ;;
   rclone) do_rclone ;;
   rollback) do_rollback ;;
   all)
@@ -364,5 +392,6 @@ case "$mode" in
     if [ "$restart_pending" = yes ]; then restart_service; fi
     say
     do_check
+    offer_service_setup
     ;;
 esac
