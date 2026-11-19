@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.3.6 - 2026-11-19
+
+- **Offline upgrade.** `sudo s3bucketferry upgrade --package FILE` installs a
+  release package copied to the machine (USB drive, file share, scp), with no
+  internet access: it checks it against `SHA256SUMS.txt` next to it (or
+  `--checksums FILE`), checks it is for this machine's system and CPU, keeps
+  the current install for `--rollback`, and restarts the service, like the
+  online upgrade. `--rclone-zip FILE` does the same for an rclone zip with
+  rclone's `SHA256SUMS`. Without a checksum file nothing is changed; `--force`
+  reinstalls the same version. From 0.3.5 or earlier, run the `upgrade.sh`
+  inside the new package once.
+- User guide: offline installation for Linux and Windows (section 3,
+  including checking the download with `sha256sum` or PowerShell
+  `Get-FileHash`), a new section 13.9 "Offline upgrade" for Linux and Windows
+  (Windows is 13.10 and upgrade problems 13.11 now), and troubleshooting rows
+  for offline messages. The guide notes that internet access is needed only
+  to download the tool, and Git never.
+- Help page: notes that the guide covers offline installation.
+- Tests: the upgrade test installs a package and an rclone zip with every
+  download address pointing nowhere, and checks the missing-checksum, wrong-CPU
+  and same-version cases.
+
 ## 0.3.5 - 2026-11-19
 
 - **`service setup`: choose HTTP or HTTPS for the web interface service.**

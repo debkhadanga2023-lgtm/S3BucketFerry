@@ -1,6 +1,6 @@
 # S3BucketFerry User Guide
 
-Version 0.3.5
+Version 0.3.6
 
 S3BucketFerry ("S3 Bucket Ferry") copies buckets from one S3-compatible storage
 system to another, checks every object, and issues a migration certificate at
@@ -114,19 +114,25 @@ browser without internet access, and `USER_GUIDE.md`. Packages are on the
 
 | System | Package |
 |---|---|
-| Linux, Intel/AMD | `s3bucketferry-0.3.5-linux-amd64.tar.gz` |
-| Linux, ARM | `s3bucketferry-0.3.5-linux-arm64.tar.gz` |
-| Windows | `s3bucketferry-0.3.5-windows-amd64.zip` |
-| macOS, Intel | `s3bucketferry-0.3.5-macos-amd64.tar.gz` |
-| macOS, Apple silicon | `s3bucketferry-0.3.5-macos-arm64.tar.gz` |
+| Linux, Intel/AMD | `s3bucketferry-0.3.6-linux-amd64.tar.gz` |
+| Linux, ARM | `s3bucketferry-0.3.6-linux-arm64.tar.gz` |
+| Windows | `s3bucketferry-0.3.6-windows-amd64.zip` |
+| macOS, Intel | `s3bucketferry-0.3.6-macos-amd64.tar.gz` |
+| macOS, Apple silicon | `s3bucketferry-0.3.6-macos-arm64.tar.gz` |
 
 Every release also has `SHA256SUMS.txt`, which lets you confirm the download
 is complete and unaltered.
 
+S3BucketFerry needs internet access only to download it. Installing, running
+migrations (S3BucketFerry needs only to reach your storage systems), the web
+interface, the built-in User guide and upgrading can all be done on a machine
+without internet: see [Offline installation](#offline-installation-no-internet-on-the-machine)
+below and section 13.9. You never need Git.
+
 ### Linux
 
 ```bash
-VER=0.3.5
+VER=0.3.6
 BASE=https://github.com/debkhadanga2023-lgtm/S3BucketFerry/releases/download/v$VER
 cd /tmp
 curl -fLO $BASE/s3bucketferry-$VER-linux-amd64.tar.gz
@@ -148,7 +154,7 @@ which certificate to use.
 
 ### Windows
 
-1. Download `s3bucketferry-0.3.5-windows-amd64.zip`.
+1. Download `s3bucketferry-0.3.6-windows-amd64.zip`.
 2. Right-click the file, select **Extract All**, and extract to a folder such as
    `C:\S3BucketFerry`.
 3. Open **PowerShell** in that folder and run `.\s3bucketferry.exe version`.
@@ -158,6 +164,66 @@ which certificate to use.
 Same as Linux, with the `macos-amd64` or `macos-arm64` package. If macOS
 refuses to open the program because it is from an unidentified developer, run
 `xattr -d com.apple.quarantine s3bucketferry rclone` in the unpacked folder.
+
+### Offline installation (no internet on the machine)
+
+Each release package already contains everything S3BucketFerry needs,
+including rclone and this guide, so nothing else is downloaded during
+installation.
+
+**On a computer with internet access**, open the
+[Releases page](https://github.com/debkhadanga2023-lgtm/S3BucketFerry/releases)
+and download two files from the release you want:
+
+- the package for the S3BucketFerry machine, for example
+  `s3bucketferry-0.3.6-linux-amd64.tar.gz` or
+  `s3bucketferry-0.3.6-windows-amd64.zip`;
+- `SHA256SUMS.txt`.
+
+Copy both to the S3BucketFerry machine, for example on a USB drive, over a file
+share, or with `scp` / WinSCP from a machine on the same network. Keep them in
+the same folder.
+
+#### Linux, offline
+
+```bash
+cd /tmp                                            # the folder you copied the two files to
+sha256sum -c --ignore-missing SHA256SUMS.txt       # must print: s3bucketferry-0.3.6-linux-amd64.tar.gz: OK
+sudo mkdir -p /opt/s3bucketferry
+sudo tar -xzf s3bucketferry-0.3.6-linux-amd64.tar.gz -C /opt/s3bucketferry --strip-components=1
+sudo ln -sf /opt/s3bucketferry/s3bucketferry /usr/local/bin/s3bucketferry
+s3bucketferry version
+s3bucketferry doctor
+```
+
+If `sha256sum` prints `FAILED` or nothing, the copy is incomplete or altered:
+copy it again. Then continue with section 4 (keys) and section 6 (the web
+interface); `sudo s3bucketferry service setup` works offline too.
+
+#### Windows, offline
+
+In PowerShell, in the folder you copied the two files to:
+
+```powershell
+cd D:\                                                     # the folder with the two files
+(Get-FileHash .\s3bucketferry-0.3.6-windows-amd64.zip -Algorithm SHA256).Hash.ToLower()
+Select-String -Path .\SHA256SUMS.txt -Pattern "windows-amd64.zip"
+```
+
+The two long values must be identical. (`certutil -hashfile <file> SHA256`
+shows the same value.) Then unpack the program into `C:\S3BucketFerry`:
+
+```powershell
+Expand-Archive .\s3bucketferry-0.3.6-windows-amd64.zip -DestinationPath $env:TEMP\s3bf
+New-Item -ItemType Directory -Force C:\S3BucketFerry | Out-Null
+Copy-Item $env:TEMP\s3bf\s3bucketferry-0.3.6-windows-amd64\* C:\S3BucketFerry -Recurse -Force
+cd C:\S3BucketFerry
+.\s3bucketferry.exe version
+.\s3bucketferry.exe doctor
+```
+
+The offline guide is `C:\S3BucketFerry\USER_GUIDE.html`; it opens in any
+browser and shows every screenshot without internet access.
 
 ### Check the installation
 
@@ -1230,6 +1296,9 @@ Your profiles, jobs, reports, certificates, web users and keys file are in
 the state folder (section 14) and are never touched by an upgrade or a
 rollback.
 
+No internet on the S3BucketFerry machine? Copy the new package there and use
+the offline upgrade (13.9); it does the same checks, backup and restart.
+
 ### 13.1 Check for a new version
 
 ```bash
@@ -1406,7 +1475,94 @@ sudo cp s3bucketferry rclone scripts/upgrade.sh /opt/s3bucketferry/
 sudo systemctl start s3bucketferry-ui
 ```
 
-### 13.9 Windows
+### 13.9 Offline upgrade (no internet on the machine)
+
+Copy the new release's files to the S3BucketFerry machine, as for an
+[offline installation](#offline-installation-no-internet-on-the-machine): the
+package and `SHA256SUMS.txt`, in one folder. Nothing is downloaded during the
+upgrade.
+
+#### Linux, offline
+
+```bash
+s3bucketferry version                                           # what you have now
+sudo s3bucketferry upgrade --package /tmp/s3bucketferry-0.3.6-linux-amd64.tar.gz
+```
+
+It works exactly like the online upgrade (13.3): it checks the package against
+`SHA256SUMS.txt` next to it, refuses to start while a migration is running,
+keeps the current install in `/opt/s3bucketferry.previous`, replaces the files
+(including the rclone in the package), and restarts the service. A rollback
+works the same way, offline: `sudo s3bucketferry upgrade --rollback`.
+
+```text
+$ sudo s3bucketferry upgrade --package /tmp/s3bucketferry-0.0.2-linux-amd64.tar.gz
+S3BucketFerry: 0.0.1 -> 0.0.2 (linux/amd64), from /tmp/s3bucketferry-0.0.2-linux-amd64.tar.gz
+  install folder: /opt/s3bucketferry
+  checksum OK: s3bucketferry-0.0.2-linux-amd64.tar.gz
+  backup of the current install: /opt/s3bucketferry.previous
+  installed: s3bucketferry 0.0.2, rclone v1.76.0
+
+installed: s3bucketferry 0.0.2, rclone v1.76.0
+```
+
+(Sample from the upgrade test, with test version numbers.)
+
+| Option | Use it to |
+|---|---|
+| `--package FILE` | Install this S3BucketFerry package. It must be for this machine's system and CPU (for example `linux-amd64`). An older version than the installed one is allowed, for a downgrade. |
+| `--rclone-zip FILE` | Install a newer rclone between S3BucketFerry releases: `rclone-v<version>-linux-amd64.zip` from the version's folder on [downloads.rclone.org](https://downloads.rclone.org/) or rclone's GitHub releases, with that folder's `SHA256SUMS` copied next to it. |
+| `--checksums FILE` | The checksum file, if it isn't in the same folder as the package. |
+| `--force` | Reinstall the version that is already installed (and skip the running-migration check). |
+| `--yes` | Don't ask for confirmation. |
+
+Both `--package` and `--rclone-zip` can be given in one command. Without the
+checksum file the upgrade stops and changes nothing: the check is what proves
+the copy is complete and unaltered.
+
+**From 0.3.5 or earlier**, the installed `upgrade.sh` doesn't have
+`--package` yet. Use the one inside the new package, once:
+
+```bash
+cd /tmp
+tar -xzf s3bucketferry-0.3.6-linux-amd64.tar.gz
+sudo bash s3bucketferry-0.3.6-linux-amd64/upgrade.sh --dir /opt/s3bucketferry \
+     --package /tmp/s3bucketferry-0.3.6-linux-amd64.tar.gz
+```
+
+From then on use `sudo s3bucketferry upgrade --package ...`.
+
+To check for a new version, use a computer with internet access: compare
+`s3bucketferry version` with the newest release on the
+[Releases page](https://github.com/debkhadanga2023-lgtm/S3BucketFerry/releases).
+`s3bucketferry upgrade --check` needs internet access.
+
+#### Windows, offline
+
+The same steps as an online Windows upgrade (13.10), with the files copied
+instead of downloaded. In PowerShell:
+
+```powershell
+cd D:\                                                     # the folder with the copied files
+(Get-FileHash .\s3bucketferry-0.3.6-windows-amd64.zip -Algorithm SHA256).Hash.ToLower()
+Select-String -Path .\SHA256SUMS.txt -Pattern "windows-amd64.zip"   # must show the same value
+```
+
+Stop the web interface (Ctrl+C in its window), then:
+
+```powershell
+Remove-Item C:\S3BucketFerry.previous -Recurse -Force -ErrorAction SilentlyContinue
+Copy-Item C:\S3BucketFerry C:\S3BucketFerry.previous -Recurse           # your rollback copy
+Expand-Archive .\s3bucketferry-0.3.6-windows-amd64.zip -DestinationPath $env:TEMP\s3bf -Force
+Copy-Item $env:TEMP\s3bf\s3bucketferry-0.3.6-windows-amd64\* C:\S3BucketFerry -Recurse -Force
+C:\S3BucketFerry\s3bucketferry.exe version
+```
+
+Start the web interface again. To roll back, stop it and copy the files back:
+`Copy-Item C:\S3BucketFerry.previous\* C:\S3BucketFerry -Recurse -Force`.
+Settings and history in `%AppData%\s3bucketferry` are kept either way.
+
+### 13.10 Windows
 
 Upgrades aren't automated on Windows, and there is no rollback command.
 
@@ -1422,7 +1578,7 @@ To roll back, stop the web interface and copy the files from
 `C:\S3BucketFerry.previous` back. Settings and history are in
 `%AppData%\s3bucketferry` and are kept either way.
 
-### 13.10 Upgrade problems
+### 13.11 Upgrade problems
 
 | Message | What to do |
 |---|---|
@@ -1434,6 +1590,10 @@ To roll back, stop the web interface and copy the files from
 | `missing programs: unzip` | `sudo apt install -y unzip` (Ubuntu/Debian) or `sudo dnf install -y unzip` (Red Hat family). Needed for rclone downloads. |
 | `no previous install to go back to` | No upgrade has been made with the command yet, so there is nothing to roll back to. Use `--version` to install a specific version. |
 | `cannot find upgrade.sh next to s3bucketferry` | The install predates 0.3.2. Use 13.7 once. |
+| `no checksum file for ...` | Copy `SHA256SUMS.txt` (for a package) or rclone's `SHA256SUMS` (for an rclone zip) from the same release into the same folder, or name it with `--checksums`. |
+| `... is for linux/arm64, but this machine is linux/amd64` | The copied package is for another CPU. Copy the one matching this machine (`uname -m`: `x86_64` is amd64, `aarch64` is arm64). |
+| `unknown option --package` | The installed `upgrade.sh` is from 0.3.5 or earlier. Use the `upgrade.sh` inside the new package once (13.9). |
+| `could not find the newest release on GitHub` on a machine without internet | `upgrade` and `upgrade --check` need internet access. Use the offline upgrade (13.9). |
 | The web interface doesn't start after an upgrade | `sudo journalctl -u s3bucketferry-ui -n 30`; if the new version is at fault, run `sudo s3bucketferry upgrade --rollback`. |
 
 ## 14. Where data is kept

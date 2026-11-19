@@ -14,11 +14,20 @@
 #   sudo ./upgrade.sh --version 0.3.2  install this S3BucketFerry version (also downgrades)
 #   sudo ./upgrade.sh --rollback   put back the install that was there before the last upgrade
 #
+# Offline (no internet on this machine): copy the files from a machine that has
+# internet, then point the script at them. Nothing is downloaded.
+#   sudo ./upgrade.sh --package /tmp/s3bucketferry-0.3.6-linux-amd64.tar.gz
+#                                  install this package; SHA256SUMS.txt must be next to it
+#   sudo ./upgrade.sh --rclone-zip /tmp/rclone-v1.76.0-linux-amd64.zip
+#                                  install this rclone; rclone's SHA256SUMS must be next to it
+#
 # Other options:
 #   --dir DIR          install folder (default: where s3bucketferry is installed, else /opt/s3bucketferry)
 #   --service NAME     systemd service to restart afterwards (default: s3bucketferry-ui, if it exists)
 #   --yes              do not ask for confirmation
-#   --force            upgrade even while a migration seems to be running
+#   --force            upgrade even while a migration seems to be running; with
+#                      --package or --rclone-zip, also reinstall the same version
+#   --checksums FILE   checksum file for --package or --rclone-zip, if it isn't next to it
 #
 # Your profiles, jobs, reports, certificates and users live in your own
 # config folder (S3BF_HOME, default ~/.config/s3bucketferry) and are never touched.
@@ -34,6 +43,7 @@ RCLONE_BASE="${S3BF_RCLONE_RELEASE_BASE:-https://github.com/rclone/rclone/releas
 RCLONE_RAW="${S3BF_RCLONE_RAW_BASE:-https://raw.githubusercontent.com/rclone/rclone}"
 
 mode=all; want_version=""; dir=""; service=s3bucketferry-ui; yes=no; force=no
+local_pkg=""; local_rclone=""; sums_file=""
 orig_args="$*"; backed_up=no
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
@@ -41,7 +51,7 @@ trap 'rm -rf "$work"' EXIT
 say()  { printf '%s\n' "$*"; }
 warn() { printf 'warning: %s\n' "$*" >&2; }
 die()  { printf 'error: %s\n' "$*" >&2; exit 1; }
-usage() { sed -n '2,26p' "$0" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '2,/^set -euo/p' "$0" | sed '$d' | sed 's/^# \{0,1\}//'; }
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -55,6 +65,12 @@ while [ $# -gt 0 ]; do
     --dir=*) dir="${1#*=}" ;;
     --service) [ $# -ge 2 ] || die "--service needs a name"; service="$2"; shift ;;
     --service=*) service="${1#*=}" ;;
+    --package) [ $# -ge 2 ] || die "--package needs a file"; local_pkg="$2"; shift ;;
+    --package=*) local_pkg="${1#*=}" ;;
+    --rclone-zip) [ $# -ge 2 ] || die "--rclone-zip needs a file"; local_rclone="$2"; shift ;;
+    --rclone-zip=*) local_rclone="${1#*=}" ;;
+    --checksums) [ $# -ge 2 ] || die "--checksums needs a file"; sums_file="$2"; shift ;;
+    --checksums=*) sums_file="${1#*=}" ;;
     --yes|-y) yes=yes ;;
     --force) force=yes ;;
     -h|--help) usage; exit 0 ;;
@@ -63,6 +79,12 @@ while [ $# -gt 0 ]; do
   shift
 done
 if [ -n "$want_version" ] && [ "$mode" = all ]; then mode=tool; fi
+if [ -n "$local_pkg" ] || [ -n "$local_rclone" ]; then
+  [ "$mode" = all ] || die "--package and --rclone-zip cannot be combined with --check, --rollback, --tool-only, --rclone-only or --version"
+  [ -n "$local_pkg" ] && [ -n "$local_rclone" ] && [ -n "$sums_file" ] && \
+    die "--checksums is for one file; with both --package and --rclone-zip, keep each checksum file next to its download"
+  mode=offline
+fi
 
 # ---- helpers ------------------------------------------------------------
 
@@ -88,6 +110,14 @@ verify() {
   got=$(sha256 "$f")
   [ "$want" = "$got" ] || die "checksum mismatch for $name (expected $want, got $got); nothing was changed"
   say "  checksum OK: $name"
+}
+
+# local_sums FILE DEFAULTNAME: the checksum file for a copied download
+local_sums() {
+  local f
+  if [ -n "$sums_file" ]; then f="$sums_file"; else f="$(dirname "$1")/$2"; fi
+  [ -f "$f" ] || die "no checksum file for $(basename "$1"): copy $2 from the same release page next to it (or name it with --checksums). It proves the copy is complete and unaltered"
+  echo "$f"
 }
 
 # newer A B: true when version A is newer than version B (v prefixes ignored)
@@ -296,11 +326,18 @@ do_tool() {
     || die "download failed: $DOWNLOAD/v$target/$pkg.tar.gz (does release v$target exist?)"
   curl -fsSL -o "$tmp/SHA256SUMS.txt" "$DOWNLOAD/v$target/SHA256SUMS.txt" || die "could not download SHA256SUMS.txt"
   verify "$tmp/$pkg.tar.gz" "$tmp/SHA256SUMS.txt"
-  tar -xzf "$tmp/$pkg.tar.gz" -C "$tmp"
+  install_package "$tmp/$pkg.tar.gz" "$pkg" "$target"
+}
+
+# install_package TARBALL PKGNAME VERSION: unpack a verified package and install it
+install_package() {
+  local tarball="$1" pkg="$2" target="$3" tmp="$work/unpack"
+  mkdir -p "$tmp"
+  tar -xzf "$tarball" -C "$tmp"
   [ -x "$tmp/$pkg/s3bucketferry" ] || die "the package has no s3bucketferry program"
   local got
   got=$("$tmp/$pkg/s3bucketferry" --version | awk '{print $2}')
-  [ "$got" = "$target" ] || die "the downloaded program reports version $got, expected $target"
+  [ "$got" = "$target" ] || die "the program in the package reports version $got, expected $target"
 
   if [ -d "$dir" ]; then backup; else mkdir -p "$dir"; fi
   local f
@@ -361,6 +398,71 @@ do_rclone() {
   restart_service
 }
 
+# ---- offline: files copied to this machine ------------------------------
+
+do_tool_offline() {
+  local f="$local_pkg" name target os arch pos parch ti
+  [ -f "$f" ] || die "$f does not exist"
+  name=$(basename "$f")
+  [[ "$name" =~ ^s3bucketferry-([0-9][0-9A-Za-z.+-]*)-(linux|macos)-(amd64|arm64)\.tar\.gz$ ]] \
+    || die "$name is not an S3BucketFerry Linux or macOS package (expected s3bucketferry-<version>-<system>-<cpu>.tar.gz)"
+  target="${BASH_REMATCH[1]}"; pos="${BASH_REMATCH[2]}"; parch="${BASH_REMATCH[3]}"
+  local pf; pf=$(platform) || exit 1
+  read -r os arch <<<"$pf"
+  [ "$pos-$parch" = "$os-$arch" ] || die "$name is for $pos/$parch, but this machine is $os/$arch; copy s3bucketferry-$target-$os-$arch.tar.gz instead"
+  ti=$(tool_installed)
+  if [ "$ti" = "$target" ] && [ "$force" != yes ]; then
+    say "S3BucketFerry $target is already installed (use --force to reinstall it)"
+    return 0
+  fi
+  say "S3BucketFerry: ${ti:-not installed} -> $target ($os/$arch), from $f"
+  if [ -n "$ti" ] && newer "$ti" "$target"; then say "  this is an older version than the one installed"; fi
+  say "  install folder: $dir"
+  local sums; sums=$(local_sums "$f" SHA256SUMS.txt)
+  verify "$f" "$sums"
+  confirm "Install S3BucketFerry $target?"
+  writable_or_sudo
+  check_busy
+  install_package "$f" "${name%.tar.gz}" "$target"
+}
+
+do_rclone_offline() {
+  local f="$local_rclone" name rn os arch ri tmp
+  [ -f "$f" ] || die "$f does not exist"
+  [ -d "$dir" ] || die "$dir does not exist; install S3BucketFerry first"
+  name=$(basename "$f" .zip)
+  [[ "$name" =~ ^rclone-(v[0-9][0-9A-Za-z.+-]*)-(linux|osx)-(amd64|arm64)$ ]] \
+    || die "$(basename "$f") is not an rclone download (expected rclone-v<version>-<system>-<cpu>.zip)"
+  rn="${BASH_REMATCH[1]}"
+  local pf; pf=$(platform) || exit 1
+  read -r os arch <<<"$pf"
+  [ "$os" = macos ] && os=osx
+  [ "${BASH_REMATCH[2]}-${BASH_REMATCH[3]}" = "$os-$arch" ] \
+    || die "$(basename "$f") is for ${BASH_REMATCH[2]}/${BASH_REMATCH[3]}, but this machine is $os/$arch; copy rclone-$rn-$os-$arch.zip instead"
+  ri=$(rclone_installed)
+  if [ "$ri" = "$rn" ] && [ "$force" != yes ]; then
+    say "rclone $rn is already installed (use --force to reinstall it)"
+    return 0
+  fi
+  say "rclone: ${ri:-not installed} -> $rn, from $f"
+  local sums; sums=$(local_sums "$f" SHA256SUMS)
+  verify "$f" "$sums"
+  confirm "Install rclone $rn?"
+  writable_or_sudo
+  check_busy
+  need unzip
+  tmp="$work/rclone"; mkdir -p "$tmp"
+  unzip -q "$f" -d "$tmp"
+  [ -x "$tmp/$name/rclone" ] || die "the zip has no $name/rclone"
+  "$tmp/$name/rclone" version >/dev/null || die "this rclone does not run on this machine"
+  backup
+  install -m 755 "$tmp/$name/rclone" "$dir/rclone"
+  echo "$rn" > "$tmp/RCLONE-VERSION.txt" && install -m 644 "$tmp/RCLONE-VERSION.txt" "$dir/RCLONE-VERSION.txt"
+  say "  installed: $("$dir/rclone" version | head -1)"
+  say "  (RCLONE-LICENSE.txt was kept; rclone's license is MIT and unchanged between releases)"
+  restart_service
+}
+
 do_rollback() {
   local prev="$dir.previous" old
   [ -d "$prev" ] || die "no previous install to go back to ($prev does not exist)"
@@ -377,13 +479,23 @@ do_rollback() {
   restart_service
 }
 
-need curl tar awk sed sort
+if [ "$mode" = offline ] || [ "$mode" = rollback ]; then need tar awk sed sort; else need curl tar awk sed sort; fi
 dir=$(find_dir)
 case "$mode" in
   check) do_check ;;
   tool) do_tool; offer_service_setup ;;
   rclone) do_rclone ;;
   rollback) do_rollback ;;
+  offline)
+    defer_restart=yes; restart_pending=no
+    [ -z "$local_pkg" ] || do_tool_offline
+    [ -z "$local_rclone" ] || do_rclone_offline
+    defer_restart=no
+    if [ "$restart_pending" = yes ]; then restart_service; fi
+    say
+    say "installed: $("$dir/s3bucketferry" --version 2>/dev/null || echo unknown), $("$dir/rclone" version 2>/dev/null | head -1 || echo 'rclone unknown')"
+    [ -z "$local_pkg" ] || offer_service_setup
+    ;;
   all)
     defer_restart=yes; restart_pending=no
     do_tool
