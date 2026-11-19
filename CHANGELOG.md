@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.3.3 - 2026-11-19
+
+- **User guide in the web interface.** A new **User guide** link under Support,
+  and a box at the top of the Help page, open the full guide with all its
+  screenshots in a new tab. It is served from the `USER_GUIDE.html` that every
+  release package installs next to the program, so it works offline; without
+  that file, the page links to the guide on GitHub. The Help page stays as the
+  short reference.
+- **Upgrade and rollback documented step by step** in the User guide (section
+  13): checking for a new version and reading `--check`, before upgrading, the
+  upgrade itself with sample output, checking the result, rollback and what it
+  restores, other options, upgrading from 0.3.1, builds from source, Windows,
+  and an upgrade problems table. Upgrade and rollback stay command-line only.
+
 ## 0.3.2 - 2026-11-18
 
 - **Dry-run plan.** A dry run now lists every object a real run would copy or

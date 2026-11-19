@@ -27,16 +27,18 @@ the [glossary](#17-glossary) at the end.
 10. [Progress, failures and results](#10-progress-failures-and-results)
 11. [Users and access levels](#11-users-and-access-levels)
 12. [Notifications](#12-notifications)
-13. [Upgrade](#13-upgrade)
+13. [Check for updates, upgrade and roll back](#13-check-for-updates-upgrade-and-roll-back)
 14. [Where data is kept](#14-where-data-is-kept)
 15. [What S3BucketFerry changes on your buckets](#15-what-s3bucketferry-changes-on-your-buckets)
 16. [Troubleshooting](#16-troubleshooting)
 17. [Glossary](#17-glossary)
 
-The screenshots and sample output in this guide were taken from S3BucketFerry
-0.3.2 (0.3.3 changes only the release packages and this guide) running real
-migrations between two test S3 servers, `source-s3.example.com` and
-`target-s3.example.com`. Your names, numbers and dates will differ.
+The screenshots and sample output in this guide come from real migrations
+between two test S3 servers, `source-s3.example.com` and `target-s3.example.com`,
+mostly made with version 0.3.2. The screens are the same in 0.3.3, except for
+the new **User guide** link. Your names, numbers and dates will differ.
+
+This guide is also built into the web interface: **Support > User guide**.
 
 ---
 
@@ -472,11 +474,26 @@ any Linux or Windows account with the same name.
 | **Migration** | **Scan**, **Migrate**, **Verify**, **Cutover**, **Certificate**, **Cleanup**: one page per task. |
 | **History** | **Activity**: every task started from the web interface, with its live output. **Jobs and reports**: every job, including those started from the command line. **Certificates**. |
 | **Settings** | **Connection profiles**, **Notifications**, **Users and access**, **My account**. |
-| **Support** | **Help**: a short reference for every page. |
+| **Support** | **Help**: a short reference for every page. **User guide**: this guide, with all its screenshots, in a new browser tab. |
 
 A **task** is something you start from the web interface; a **job** is the
 record it leaves in the history, with reports and logs. A cutover is one task
 but two jobs: the final sync and the certificate.
+
+### Help and the User guide
+
+**Support > Help** is a short reference: one paragraph per page and task. For
+step-by-step instructions, select **Open the User guide** at the top of the
+Help page, or **Support > User guide** in the menu.
+
+![The Help page with the link to the User guide](images/34-help-guide-link.png)
+
+The User guide opens in a new tab. It is the `USER_GUIDE.html` file that every
+release package installs next to the program, so it works without internet
+access. Any signed-in user can read it. If the file is missing (for example in
+a build from source), the page links to the guide on GitHub instead.
+
+![The User guide inside the web interface](images/35-user-guide.png)
 
 ## 8. Migrate with the web interface
 
@@ -892,56 +909,156 @@ s3bucketferry notify set --smtp-host smtp.example.com --smtp-port 587 \
 s3bucketferry notify test
 ```
 
-## 13. Upgrade
+## 13. Check for updates, upgrade and roll back
 
-On Linux and macOS, `s3bucketferry upgrade` upgrades both S3BucketFerry and its
-rclone. It:
+Upgrades and rollbacks are done on the command line of the S3BucketFerry
+machine, not in the web interface. This keeps them in the hands of whoever
+administers that machine.
 
-1. finds the newest release of each;
-2. downloads them and checks their published SHA-256 checksums (a mismatch
-   stops it, with nothing changed);
+On Linux and macOS, one command handles both S3BucketFerry and its rclone:
+`s3bucketferry upgrade`. It runs `upgrade.sh`, which every release package
+installs next to the program. It:
+
+1. finds the newest S3BucketFerry release on GitHub and the newest rclone
+   release;
+2. downloads them and checks each against its published SHA-256 checksum. A
+   mismatch stops it, with nothing changed;
 3. refuses to start while a migration is running;
-4. keeps a copy of the current install (`<install folder>.previous`), for
-   rollback;
+4. keeps a complete copy of the current install in `<install folder>.previous`
+   (normally `/opt/s3bucketferry.previous`), for rollback;
 5. replaces the program files;
-6. restarts the `s3bucketferry-ui` service, if there is one.
+6. restarts the `s3bucketferry-ui` service, if there is one, and checks it is
+   running.
 
-Profiles, jobs, reports, certificates, users and the keys file are not
-touched.
+Your profiles, jobs, reports, certificates, web users and keys file are in
+the state folder (section 14) and are never touched by an upgrade or a
+rollback.
 
-### Check and upgrade
+### 13.1 Check for a new version
 
 ```bash
+s3bucketferry version                # the version installed
 s3bucketferry upgrade --check        # installed and newest versions; changes nothing
-sudo s3bucketferry upgrade           # upgrade S3BucketFerry, then rclone
 ```
 
-`--check` prints, for example:
-
 ```text
+$ s3bucketferry upgrade --check
 install folder: /opt/s3bucketferry
                 installed    newest
-S3BucketFerry   0.3.3        0.3.3        up to date
-rclone          v1.76.0      v1.77.0      UPGRADE AVAILABLE
+S3BucketFerry   0.3.2        0.3.3        UPGRADE AVAILABLE
+rclone          v1.76.0      v1.76.0      up to date
 web UI service: s3bucketferry-ui (running)
 ```
 
-`sudo` is needed when the install folder belongs to root. The script asks
-before changing anything; add `--yes` to skip the question.
+| Status | Meaning |
+|---|---|
+| `up to date` | Nothing to do. |
+| `UPGRADE AVAILABLE` | A newer version exists; continue with 13.3. |
+| `could not reach GitHub` or `could not reach rclone.org or GitHub` | This machine has no internet access, or GitHub's limit of 60 checks an hour was reached. Try again later. |
+
+`--check` needs no `sudo`. The newest S3BucketFerry versions, with what changed,
+are also listed on the
+[Releases page](https://github.com/debkhadanga2023-lgtm/S3BucketFerry/releases)
+and in `CHANGELOG.md` in the install folder. rclone's newest version comes from
+`downloads.rclone.org`.
+
+### 13.2 Before you upgrade
+
+- Let running migrations finish: check **Activity** in the web interface, or
+  run `pgrep -a rclone`. The upgrade refuses to start while rclone from the
+  install folder is running.
+- Optional: back up the state folder, or take a snapshot if the machine is a
+  virtual machine.
+
+### 13.3 Upgrade
+
+```bash
+sudo s3bucketferry upgrade
+```
+
+`sudo` is needed because the install folder (`/opt/s3bucketferry`) belongs to
+root. Without it, the command stops and shows the exact command to run.
+
+The command asks before changing anything. Answer **Y**, or add `--yes` to skip
+the question:
+
+```text
+$ sudo s3bucketferry upgrade
+S3BucketFerry: 0.3.2 -> 0.3.3 (linux/amd64)
+  install folder: /opt/s3bucketferry
+Upgrade S3BucketFerry to 0.3.3? [Y/n] y
+  downloading s3bucketferry-0.3.3-linux-amd64.tar.gz
+  checksum OK: s3bucketferry-0.3.3-linux-amd64.tar.gz
+  backup of the current install: /opt/s3bucketferry.previous
+  installed: s3bucketferry 0.3.3, rclone v1.76.0
+rclone v1.76.0 is up to date
+  restarted the s3bucketferry-ui service
+  s3bucketferry-ui is running
+
+install folder: /opt/s3bucketferry
+                installed    newest
+S3BucketFerry   0.3.3        0.3.3        up to date
+rclone          v1.76.0      v1.76.0      up to date
+web UI service: s3bucketferry-ui (running)
+```
+
+If only rclone has a new version, the same command upgrades just rclone.
+
+### 13.4 Check the result
+
+```bash
+s3bucketferry version                                  # the new version
+s3bucketferry doctor                                   # versions, rclone found, profiles
+sudo systemctl status s3bucketferry-ui --no-pager      # active (running)
+```
+
+Then log in to the web interface: your jobs, profiles and users are all there.
+A dry run (section 8.2) is a quick way to confirm everything works.
+
+### 13.5 Roll back
+
+If the new version misbehaves, put back the install as it was before the last
+upgrade, program and rclone together:
+
+```bash
+sudo s3bucketferry upgrade --rollback
+```
+
+```text
+$ sudo s3bucketferry upgrade --rollback
+current : s3bucketferry 0.3.3, rclone v1.76.0
+previous: s3bucketferry 0.3.2, rclone v1.76.0
+Go back to the previous install? [Y/n] y
+  restored. The version you rolled back from is kept in /opt/s3bucketferry.previous (run --rollback again to return to it)
+  restarted the s3bucketferry-ui service
+  s3bucketferry-ui is running
+```
+
+- The two installs swap places, so running `--rollback` again returns to the
+  newer version.
+- Rollback needs a previous upgrade made with this command or `upgrade.sh`.
+  Otherwise it stops with `no previous install to go back to`.
+- Only one previous install is kept. To go back further, install a specific
+  version: `sudo s3bucketferry upgrade --version 0.3.2`.
+- Rollback only swaps program files. Jobs run with the newer version stay in
+  the history.
+
+### 13.6 Other upgrade options
 
 | Command | Does |
 |---|---|
-| `sudo s3bucketferry upgrade --rclone-only` | Upgrade only rclone. Releases bundle the newest rclone at build time; rclone may release again in between. |
-| `sudo s3bucketferry upgrade --tool-only` | Upgrade only S3BucketFerry (with the rclone in its package). |
-| `sudo s3bucketferry upgrade --version 0.3.2` | Install one specific version, also older ones. |
-| `sudo s3bucketferry upgrade --rollback` | Put back the install as it was before the last upgrade. Run it again to return. |
+| `sudo s3bucketferry upgrade --rclone-only` | Upgrade only rclone. Each release bundles the newest rclone when it is built; rclone may release again in between. |
+| `sudo s3bucketferry upgrade --tool-only` | Upgrade only S3BucketFerry, with the rclone in its package. |
+| `sudo s3bucketferry upgrade --version 0.3.2` | Install one specific version, newer or older. |
+| `--yes` | Don't ask for confirmation. |
+| `--force` | Upgrade even though a migration seems to be running. Use only if you are sure nothing is running. |
+| `--dir FOLDER` | The install folder, if it isn't where `s3bucketferry` is found. |
+| `--service NAME` | The service to restart, if it isn't `s3bucketferry-ui`. |
 
-Check the result with `s3bucketferry doctor` and
-`sudo systemctl status s3bucketferry-ui --no-pager`, then log in.
+### 13.7 Upgrading from 0.3.1
 
-### Upgrading from 0.3.1
-
-Version 0.3.1 doesn't include `upgrade.sh` yet. Download it once:
+Version 0.3.1 doesn't include the upgrade command yet. Download the script
+once and run it; it works the same way:
 
 ```bash
 cd /tmp
@@ -950,11 +1067,51 @@ bash upgrade.sh --check
 sudo bash upgrade.sh
 ```
 
-### Windows
+From then on use `s3bucketferry upgrade`. A rollback after this upgrade
+(`sudo s3bucketferry upgrade --rollback`) returns to 0.3.1.
 
-Upgrades aren't automated on Windows. Stop the web interface, download the new
-`windows-amd64.zip`, and extract it over the old folder. Your settings and
-history are in `%AppData%\s3bucketferry` and are kept.
+### 13.8 Builds from source
+
+The upgrade command also works for a program you built yourself, as long as
+`s3bucketferry` and `rclone` are in `/opt/s3bucketferry` (section 6). It replaces
+them with the official release package. To stay on your own builds instead:
+
+```bash
+cd ~/S3BucketFerry && git pull
+make build && bash scripts/fetch-rclone.sh linux amd64 .
+sudo systemctl stop s3bucketferry-ui
+sudo cp s3bucketferry rclone scripts/upgrade.sh /opt/s3bucketferry/
+sudo systemctl start s3bucketferry-ui
+```
+
+### 13.9 Windows
+
+Upgrades aren't automated on Windows, and there is no rollback command.
+
+1. Check your version with `.\s3bucketferry.exe version`, and the newest on the
+   [Releases page](https://github.com/debkhadanga2023-lgtm/S3BucketFerry/releases).
+2. Stop the web interface (Ctrl+C in its window).
+3. Copy the program folder (for example `C:\S3BucketFerry`) to
+   `C:\S3BucketFerry.previous`. This copy is your rollback.
+4. Download the new `windows-amd64.zip` and extract it over the program folder.
+5. Start the web interface again.
+
+To roll back, stop the web interface and copy the files from
+`C:\S3BucketFerry.previous` back. Settings and history are in
+`%AppData%\s3bucketferry` and are kept either way.
+
+### 13.10 Upgrade problems
+
+| Message | What to do |
+|---|---|
+| `no write access to /opt/s3bucketferry; run with sudo` | Run the command it shows, with `sudo`. |
+| `a migration is running` | Wait for it to finish (`pgrep -a rclone`). Use `--force` only if you are sure nothing is running. |
+| `could not find the newest release on GitHub` | No internet access, or GitHub's hourly limit was reached. Try later, or name the version with `--version`. |
+| `checksum mismatch ... nothing was changed` | The download was damaged or altered. Try again later. If it repeats, report it on GitHub; don't install that file by hand. |
+| `missing programs: unzip` | `sudo apt install -y unzip` (Ubuntu/Debian) or `sudo dnf install -y unzip` (Red Hat family). Needed for rclone downloads. |
+| `no previous install to go back to` | No upgrade has been made with the command yet, so there is nothing to roll back to. Use `--version` to install a specific version. |
+| `cannot find upgrade.sh next to s3bucketferry` | The install predates 0.3.2. Use 13.7 once. |
+| The web interface doesn't start after an upgrade | `sudo journalctl -u s3bucketferry-ui -n 30`; if the new version is at fault, run `sudo s3bucketferry upgrade --rollback`. |
 
 ## 14. Where data is kept
 
