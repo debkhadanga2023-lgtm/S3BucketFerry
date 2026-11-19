@@ -1,6 +1,6 @@
 # S3BucketFerry User Guide
 
-Version 0.3.6
+Version 0.3.7
 
 S3BucketFerry ("S3 Bucket Ferry") copies buckets from one S3-compatible storage
 system to another, checks every object, and issues a migration certificate at
@@ -114,11 +114,11 @@ browser without internet access, and `USER_GUIDE.md`. Packages are on the
 
 | System | Package |
 |---|---|
-| Linux, Intel/AMD | `s3bucketferry-0.3.6-linux-amd64.tar.gz` |
-| Linux, ARM | `s3bucketferry-0.3.6-linux-arm64.tar.gz` |
-| Windows | `s3bucketferry-0.3.6-windows-amd64.zip` |
-| macOS, Intel | `s3bucketferry-0.3.6-macos-amd64.tar.gz` |
-| macOS, Apple silicon | `s3bucketferry-0.3.6-macos-arm64.tar.gz` |
+| Linux, Intel/AMD | `s3bucketferry-0.3.7-linux-amd64.tar.gz` |
+| Linux, ARM | `s3bucketferry-0.3.7-linux-arm64.tar.gz` |
+| Windows | `s3bucketferry-0.3.7-windows-amd64.zip` |
+| macOS, Intel | `s3bucketferry-0.3.7-macos-amd64.tar.gz` |
+| macOS, Apple silicon | `s3bucketferry-0.3.7-macos-arm64.tar.gz` |
 
 Every release also has `SHA256SUMS.txt`, which lets you confirm the download
 is complete and unaltered.
@@ -132,7 +132,7 @@ below and section 13.9. You never need Git.
 ### Linux
 
 ```bash
-VER=0.3.6
+VER=0.3.7
 BASE=https://github.com/debkhadanga2023-lgtm/S3BucketFerry/releases/download/v$VER
 cd /tmp
 curl -fLO $BASE/s3bucketferry-$VER-linux-amd64.tar.gz
@@ -154,7 +154,7 @@ which certificate to use.
 
 ### Windows
 
-1. Download `s3bucketferry-0.3.6-windows-amd64.zip`.
+1. Download `s3bucketferry-0.3.7-windows-amd64.zip`.
 2. Right-click the file, select **Extract All**, and extract to a folder such as
    `C:\S3BucketFerry`.
 3. Open **PowerShell** in that folder and run `.\s3bucketferry.exe version`.
@@ -176,8 +176,8 @@ installation.
 and download two files from the release you want:
 
 - the package for the S3BucketFerry machine, for example
-  `s3bucketferry-0.3.6-linux-amd64.tar.gz` or
-  `s3bucketferry-0.3.6-windows-amd64.zip`;
+  `s3bucketferry-0.3.7-linux-amd64.tar.gz` or
+  `s3bucketferry-0.3.7-windows-amd64.zip`;
 - `SHA256SUMS.txt`.
 
 Copy both to the S3BucketFerry machine, for example on a USB drive, over a file
@@ -188,9 +188,9 @@ the same folder.
 
 ```bash
 cd /tmp                                            # the folder you copied the two files to
-sha256sum -c --ignore-missing SHA256SUMS.txt       # must print: s3bucketferry-0.3.6-linux-amd64.tar.gz: OK
+sha256sum -c --ignore-missing SHA256SUMS.txt       # must print: s3bucketferry-0.3.7-linux-amd64.tar.gz: OK
 sudo mkdir -p /opt/s3bucketferry
-sudo tar -xzf s3bucketferry-0.3.6-linux-amd64.tar.gz -C /opt/s3bucketferry --strip-components=1
+sudo tar -xzf s3bucketferry-0.3.7-linux-amd64.tar.gz -C /opt/s3bucketferry --strip-components=1
 sudo ln -sf /opt/s3bucketferry/s3bucketferry /usr/local/bin/s3bucketferry
 s3bucketferry version
 s3bucketferry doctor
@@ -206,7 +206,7 @@ In PowerShell, in the folder you copied the two files to:
 
 ```powershell
 cd D:\                                                     # the folder with the two files
-(Get-FileHash .\s3bucketferry-0.3.6-windows-amd64.zip -Algorithm SHA256).Hash.ToLower()
+(Get-FileHash .\s3bucketferry-0.3.7-windows-amd64.zip -Algorithm SHA256).Hash.ToLower()
 Select-String -Path .\SHA256SUMS.txt -Pattern "windows-amd64.zip"
 ```
 
@@ -214,9 +214,9 @@ The two long values must be identical. (`certutil -hashfile <file> SHA256`
 shows the same value.) Then unpack the program into `C:\S3BucketFerry`:
 
 ```powershell
-Expand-Archive .\s3bucketferry-0.3.6-windows-amd64.zip -DestinationPath $env:TEMP\s3bf
+Expand-Archive .\s3bucketferry-0.3.7-windows-amd64.zip -DestinationPath $env:TEMP\s3bf
 New-Item -ItemType Directory -Force C:\S3BucketFerry | Out-Null
-Copy-Item $env:TEMP\s3bf\s3bucketferry-0.3.6-windows-amd64\* C:\S3BucketFerry -Recurse -Force
+Copy-Item $env:TEMP\s3bf\s3bucketferry-0.3.7-windows-amd64\* C:\S3BucketFerry -Recurse -Force
 cd C:\S3BucketFerry
 .\s3bucketferry.exe version
 .\s3bucketferry.exe doctor
@@ -242,16 +242,11 @@ updates       : s3bucketferry upgrade --check
 is from version 0.3.2.) The **state folder** is
 where S3BucketFerry keeps its settings and history (section 14).
 
-### From source (developers)
+### Where the downloads come from
 
-Building needs Go 1.24 or later:
-
-```bash
-git clone https://github.com/debkhadanga2023-lgtm/S3BucketFerry.git
-cd S3BucketFerry
-make build                                   # builds ./s3bucketferry
-bash scripts/fetch-rclone.sh linux amd64 .   # downloads the newest rclone next to it
-```
+The [S3BucketFerry repository](https://github.com/debkhadanga2023-lgtm/S3BucketFerry)
+on GitHub holds the release packages, this guide and `upgrade.sh`. The source
+code isn't published there: install from the release packages.
 
 ## 4. Store the access keys
 
@@ -1463,7 +1458,8 @@ From then on use `s3bucketferry upgrade`. A rollback after this upgrade
 
 ### 13.8 Builds from source
 
-The upgrade command also works for a program you built yourself, as long as
+This is for maintainers who build S3BucketFerry from its source code, which
+isn't public. The upgrade command also works for a program you built yourself, as long as
 `s3bucketferry` and `rclone` are in `/opt/s3bucketferry` (section 6). It replaces
 them with the official release package. To stay on your own builds instead:
 
@@ -1486,7 +1482,7 @@ upgrade.
 
 ```bash
 s3bucketferry version                                           # what you have now
-sudo s3bucketferry upgrade --package /tmp/s3bucketferry-0.3.6-linux-amd64.tar.gz
+sudo s3bucketferry upgrade --package /tmp/s3bucketferry-0.3.7-linux-amd64.tar.gz
 ```
 
 It works exactly like the online upgrade (13.3): it checks the package against
@@ -1525,9 +1521,9 @@ the copy is complete and unaltered.
 
 ```bash
 cd /tmp
-tar -xzf s3bucketferry-0.3.6-linux-amd64.tar.gz
-sudo bash s3bucketferry-0.3.6-linux-amd64/upgrade.sh --dir /opt/s3bucketferry \
-     --package /tmp/s3bucketferry-0.3.6-linux-amd64.tar.gz
+tar -xzf s3bucketferry-0.3.7-linux-amd64.tar.gz
+sudo bash s3bucketferry-0.3.7-linux-amd64/upgrade.sh --dir /opt/s3bucketferry \
+     --package /tmp/s3bucketferry-0.3.7-linux-amd64.tar.gz
 ```
 
 From then on use `sudo s3bucketferry upgrade --package ...`.
@@ -1544,7 +1540,7 @@ instead of downloaded. In PowerShell:
 
 ```powershell
 cd D:\                                                     # the folder with the copied files
-(Get-FileHash .\s3bucketferry-0.3.6-windows-amd64.zip -Algorithm SHA256).Hash.ToLower()
+(Get-FileHash .\s3bucketferry-0.3.7-windows-amd64.zip -Algorithm SHA256).Hash.ToLower()
 Select-String -Path .\SHA256SUMS.txt -Pattern "windows-amd64.zip"   # must show the same value
 ```
 
@@ -1553,8 +1549,8 @@ Stop the web interface (Ctrl+C in its window), then:
 ```powershell
 Remove-Item C:\S3BucketFerry.previous -Recurse -Force -ErrorAction SilentlyContinue
 Copy-Item C:\S3BucketFerry C:\S3BucketFerry.previous -Recurse           # your rollback copy
-Expand-Archive .\s3bucketferry-0.3.6-windows-amd64.zip -DestinationPath $env:TEMP\s3bf -Force
-Copy-Item $env:TEMP\s3bf\s3bucketferry-0.3.6-windows-amd64\* C:\S3BucketFerry -Recurse -Force
+Expand-Archive .\s3bucketferry-0.3.7-windows-amd64.zip -DestinationPath $env:TEMP\s3bf -Force
+Copy-Item $env:TEMP\s3bf\s3bucketferry-0.3.7-windows-amd64\* C:\S3BucketFerry -Recurse -Force
 C:\S3BucketFerry\s3bucketferry.exe version
 ```
 

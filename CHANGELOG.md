@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.3.7 - 2026-11-19
+
+- **Separate public download repository.** The source code can now be kept in
+  a private repository (for example `S3BucketFerry-source`) while releases are
+  published to the public `debkhadanga2023-lgtm/S3BucketFerry` repository. It
+  keeps the original name, so installed copies keep upgrading from it, and the
+  guide's screenshot links, the web interface's online guide link and
+  `upgrade.sh` downloads keep working. The Release workflow publishes there
+  when the repository variable `PUBLIC_REPO` and the secret
+  `PUBLIC_REPO_TOKEN` are set (`scripts/publish-public.sh`); without them it
+  works as before. A new "Publish to public repository" workflow copies
+  existing releases there once. Steps are in the README ("Repositories and
+  releases").
+- Release packages contain a README written for users (`public/README.md`),
+  which is also the public repository's front page.
+- User guide: section 3 explains where the downloads come from; the
+  build-from-source part is now for maintainers only (13.8).
+
 ## 0.3.6 - 2026-11-19
 
 - **Offline upgrade.** `sudo s3bucketferry upgrade --package FILE` installs a
