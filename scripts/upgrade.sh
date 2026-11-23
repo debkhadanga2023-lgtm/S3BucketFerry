@@ -23,7 +23,11 @@
 #
 # Other options:
 #   --dir DIR          install folder (default: where s3bucketferry is installed, else /opt/s3bucketferry)
-#   --service NAME     systemd service to restart afterwards (default: s3bucketferry-ui, if it exists)
+#   --service NAME     restart only this systemd service afterwards (default: every
+#                      s3bucketferry* service that is running, such as s3bucketferry-ui)
+#   --no-restart       change the files only; running services keep the old version
+#                      until you restart them (normally upgrade restarts them and,
+#                      if needed, asks for sudo first)
 #   --yes              do not ask for confirmation
 #   --force            upgrade even while a migration seems to be running; with
 #                      --package or --rclone-zip, also reinstall the same version
@@ -42,9 +46,9 @@ RCLONE_API="${S3BF_RCLONE_API_URL:-https://api.github.com/repos/rclone/rclone/re
 RCLONE_BASE="${S3BF_RCLONE_RELEASE_BASE:-https://github.com/rclone/rclone/releases/download}"
 RCLONE_RAW="${S3BF_RCLONE_RAW_BASE:-https://raw.githubusercontent.com/rclone/rclone}"
 
-mode=all; want_version=""; dir=""; service=s3bucketferry-ui; yes=no; force=no
+mode=all; want_version=""; dir=""; service=s3bucketferry-ui; service_given=no; yes=no; force=no; no_restart=no
 local_pkg=""; local_rclone=""; sums_file=""
-orig_args="$*"; backed_up=no
+orig_args="$*"; orig=("$@"); backed_up=no
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 
@@ -63,8 +67,9 @@ while [ $# -gt 0 ]; do
     --version=*) want_version="${1#*=}"; want_version="${want_version#v}" ;;
     --dir) [ $# -ge 2 ] || die "--dir needs a folder"; dir="$2"; shift ;;
     --dir=*) dir="${1#*=}" ;;
-    --service) [ $# -ge 2 ] || die "--service needs a name"; service="$2"; shift ;;
-    --service=*) service="${1#*=}" ;;
+    --service) [ $# -ge 2 ] || die "--service needs a name"; service="$2"; service_given=yes; shift ;;
+    --service=*) service="${1#*=}"; service_given=yes ;;
+    --no-restart) no_restart=yes ;;
     --package) [ $# -ge 2 ] || die "--package needs a file"; local_pkg="$2"; shift ;;
     --package=*) local_pkg="${1#*=}" ;;
     --rclone-zip) [ $# -ge 2 ] || die "--rclone-zip needs a file"; local_rclone="$2"; shift ;;
@@ -197,14 +202,60 @@ service_active() {
 
 # A migration started from the CLI or the web UI runs rclone from the install folder.
 check_busy() {
-  [ "$force" = yes ] && return 0
   command -v pgrep >/dev/null 2>&1 || return 0
   if pgrep -f "^$dir/rclone( |$)" >/dev/null 2>&1; then
+    if [ "$force" = yes ]; then
+      warn "a migration is running; restarting the web interface stops the tasks it started. Resume them afterwards (job page > Resume)"
+      return 0
+    fi
     die "a migration is running (rclone from $dir is active). Wait for it to finish, or rerun with --force"
   fi
 }
 
+# ferry_services lists the S3BucketFerry services to restart after a change:
+# the one named with --service, or else every s3bucketferry* unit.
+ferry_services() {
+  command -v systemctl >/dev/null 2>&1 || return 0
+  if [ "$service_given" = yes ]; then
+    service_exists && echo "$service"
+    return 0
+  fi
+  systemctl list-unit-files --type=service --no-legend 's3bucketferry*.service' 2>/dev/null \
+    | awk '{print $1}' | sed -n 's/\.service$//p' | sort -u
+}
+
+# restart_targets: the services from ferry_services that are running or
+# enabled (a stopped, disabled one is left alone).
+restart_targets() {
+  local svc
+  for svc in $(ferry_services); do
+    if systemctl is-active --quiet "$svc" || systemctl is-enabled --quiet "$svc" 2>/dev/null; then echo "$svc"; fi
+  done
+}
+
+# need_root_for_restart makes sure the services can be restarted after the
+# change: without root, it runs this script again with sudo (asking for the
+# password), before anything is changed. With --no-restart it only warns.
+need_root_for_restart() {
+  [ "$(id -u)" -eq 0 ] && return 0
+  local svcs; svcs=$(restart_targets | tr '\n' ' ' | sed 's/ $//')
+  [ -n "$svcs" ] || return 0
+  if [ "$no_restart" = yes ]; then
+    warn "--no-restart: $svcs will keep running the OLD version until you run:  sudo systemctl restart $svcs"
+    return 0
+  fi
+  if command -v sudo >/dev/null 2>&1 && { [ -t 0 ] || sudo -n true 2>/dev/null; }; then
+    say "  the web interface runs as a system service ($svcs); restarting it needs root, so this runs again with sudo"
+    local keep=() v
+    while IFS= read -r v; do keep+=("$v"); done < <(env | grep '^S3BF_' || true)
+    exec sudo env "${keep[@]}" bash "$0" "${orig[@]}" --yes
+  fi
+  die "the upgrade must restart $svcs so it runs the new version, and that needs root. Run:  ${S3BF_UPGRADE_HINT:-sudo bash $0 $orig_args}
+  (or add --no-restart to change only the files and restart later)"
+}
+
 writable_or_sudo() {
+  need_root_for_restart
   local probe="$dir"
   [ -d "$probe" ] || probe=$(dirname "$dir")
   if [ ! -w "$probe" ]; then
@@ -227,23 +278,60 @@ backup() {
 
 restart_service() {
   [ "${defer_restart:-no}" = yes ] && { restart_pending=yes; return 0; }
-  if service_exists; then
-    if [ "$(id -u)" -eq 0 ]; then
-      if systemctl restart "$service"; then
-        say "  restarted the $service service"
+  if [ "$no_restart" = yes ]; then
+    local svcs; svcs=$(restart_targets | tr '\n' ' ' | sed 's/ $//')
+    [ -z "$svcs" ] || warn "not restarted (--no-restart): $svcs still runs the old version. Restart it:  sudo systemctl restart $svcs"
+    warn_manual_ui
+    return 0
+  fi
+  local svc pid any=no
+  for svc in $(ferry_services); do
+    any=yes
+    if ! systemctl is-active --quiet "$svc" && ! systemctl is-enabled --quiet "$svc" 2>/dev/null; then
+      say "  $svc is not running and not enabled; not started"
+      continue
+    fi
+    if [ "$(id -u)" -ne 0 ]; then
+      warn "cannot restart $svc without root: it still runs the old version. Run:  sudo systemctl restart $svc"
+      continue
+    fi
+    if systemctl restart "$svc"; then
+      say "  restarted the $svc service"
+    else
+      warn "could not restart $svc; check: sudo journalctl -u $svc -n 30"
+      continue
+    fi
+    sleep 1
+    if ! systemctl is-active --quiet "$svc"; then
+      warn "$svc is not running; check: sudo journalctl -u $svc -n 30"
+      continue
+    fi
+    # Check the restarted service really runs the program just installed.
+    pid=$(systemctl show -p MainPID --value "$svc" 2>/dev/null || true)
+    if [ -n "$pid" ] && [ "$pid" != 0 ] && [ -e "/proc/$pid/exe" ]; then
+      if [ "/proc/$pid/exe" -ef "$dir/s3bucketferry" ]; then
+        say "  $svc is running $("$dir/s3bucketferry" --version 2>/dev/null || echo 'the new version')"
       else
-        warn "could not restart $service; check: sudo journalctl -u $service -n 30"
-      fi
-      sleep 1
-      if systemctl is-active --quiet "$service"; then
-        say "  $service is running"
-      else
-        warn "$service is not running; check: sudo journalctl -u $service -n 30"
+        warn "$svc is running, but not the program in $dir (its ExecStart points elsewhere); check: systemctl cat $svc"
       fi
     else
-      say "  restart the web UI to use the new version:  sudo systemctl restart $service"
+      say "  $svc is running"
     fi
-  fi
+  done
+  [ "$any" = yes ] || true
+  warn_manual_ui
+}
+
+# A web interface started by hand (not as a service) keeps the old program
+# until it is stopped and started again.
+warn_manual_ui() {
+  command -v pgrep >/dev/null 2>&1 || return 0
+  local p cg
+  for p in $(pgrep -f "^$dir/s3bucketferry ui( |$)" 2>/dev/null || true); do
+    cg=$(cat "/proc/$p/cgroup" 2>/dev/null || true)
+    case "$cg" in *s3bucketferry*.service*) continue ;; esac
+    warn "a web interface started by hand (process $p) still runs the old version; stop it (kill $p) and start it again"
+  done
 }
 
 # The web interface service can be set up with "s3bucketferry service setup"
@@ -293,9 +381,10 @@ do_check() {
   elif newer "$rn" "$ri"; then s="UPGRADE AVAILABLE"
   else s="up to date"; fi
   printf '%-15s %-12s %-12s %s\n' "rclone" "${ri:--}" "${rn:--}" "$s"
-  if service_exists; then
-    if service_active; then say "web UI service: $service (running)"; else say "web UI service: $service (not running)"; fi
-  fi
+  local svc
+  for svc in $(ferry_services); do
+    if systemctl is-active --quiet "$svc"; then say "service: $svc (running)"; else say "service: $svc (not running)"; fi
+  done
 }
 
 do_tool() {

@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.3.10 - 2026-11-23
+
+- **Changed keys are used without a restart.** The web interface reads the
+  keys file again before every task it starts (scan, migrate, verify, cutover,
+  certificate, profile test, resume and the rest) and gives the task the
+  current values. The first line of each task's output says which keys file was
+  read and which variables changed, were added or were removed since the
+  previous task; key values are never shown or logged. A task already running
+  keeps its keys. The file is found through `S3BF_KEYS_FILE` (now written into
+  the service by `service setup`), the service's `EnvironmentFile=`, or
+  `~/.config/s3bf-keys.env`. After saving a profile, the "not set" note checks
+  the keys file too.
+- **`upgrade` always restarts the web interface.** It restarts every
+  `s3bucketferry*` service that is running or enabled (or only `--service
+  NAME`), and checks each one is running the program just installed. Without
+  root it runs itself again with `sudo` (asking for the password) *before*
+  changing anything; if it can't get root, it stops with nothing changed. A web
+  interface started by hand is reported, since it must be restarted by hand.
+  New `--no-restart` changes only the files, with a warning. `--force` during a
+  migration now warns that the restart stops the tasks the web interface
+  started.
+- User guide: sections 4, 5, 6 and 13 and troubleshooting updated (no restart
+  after key changes; upgrade restarts and asks for sudo; new messages). Help
+  page updated to match.
+- Tests: keys file parsing, change detection without values, a task getting
+  the current value; service file round trip with `S3BF_KEYS_FILE`; upgrade
+  restarts running services only, refuses without root before changing
+  anything, and `--no-restart`.
+
 ## 0.3.9 - 2026-11-20
 
 - **Edit a connection profile in the web interface.** Users with full access

@@ -35,7 +35,7 @@ offline). Nothing else needs installing.
 ## Install on Linux
 
 ```bash
-VER=<version>        # for example 0.3.9
+VER=<version>        # for example 0.3.10
 BASE=https://github.com/debkhadanga2023-lgtm/S3BucketFerry/releases/download/v$VER
 cd /tmp
 curl -fLO $BASE/s3bucketferry-$VER-linux-amd64.tar.gz
@@ -68,8 +68,9 @@ sudo s3bucketferry upgrade --package /tmp/s3bucketferry-<version>-linux-amd64.ta
 ```
 
 Every download is checked against its published SHA-256 checksum, and the
-previous install is kept for rollback. Details, and upgrading on Windows, are
-in the User Guide, section 13.
+previous install is kept for rollback. The upgrade restarts the web interface
+service so it runs the new version (it asks for sudo if needed). Details, and
+upgrading on Windows, are in the User Guide, section 13.
 
 ## Documentation
 

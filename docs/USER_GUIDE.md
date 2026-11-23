@@ -1,6 +1,6 @@
 # S3BucketFerry User Guide
 
-Version 0.3.9
+Version 0.3.10
 
 S3BucketFerry ("S3 Bucket Ferry") copies buckets from one S3-compatible storage
 system to another, checks every object, and issues a migration certificate at
@@ -114,11 +114,11 @@ browser without internet access, and `USER_GUIDE.md`. Packages are on the
 
 | System | Package |
 |---|---|
-| Linux, Intel/AMD | `s3bucketferry-0.3.9-linux-amd64.tar.gz` |
-| Linux, ARM | `s3bucketferry-0.3.9-linux-arm64.tar.gz` |
-| Windows | `s3bucketferry-0.3.9-windows-amd64.zip` |
-| macOS, Intel | `s3bucketferry-0.3.9-macos-amd64.tar.gz` |
-| macOS, Apple silicon | `s3bucketferry-0.3.9-macos-arm64.tar.gz` |
+| Linux, Intel/AMD | `s3bucketferry-0.3.10-linux-amd64.tar.gz` |
+| Linux, ARM | `s3bucketferry-0.3.10-linux-arm64.tar.gz` |
+| Windows | `s3bucketferry-0.3.10-windows-amd64.zip` |
+| macOS, Intel | `s3bucketferry-0.3.10-macos-amd64.tar.gz` |
+| macOS, Apple silicon | `s3bucketferry-0.3.10-macos-arm64.tar.gz` |
 
 Every release also has `SHA256SUMS.txt`, which lets you confirm the download
 is complete and unaltered.
@@ -132,7 +132,7 @@ below and section 13.9. You never need Git.
 ### Linux
 
 ```bash
-VER=0.3.9
+VER=0.3.10
 BASE=https://github.com/debkhadanga2023-lgtm/S3BucketFerry/releases/download/v$VER
 cd /tmp
 curl -fLO $BASE/s3bucketferry-$VER-linux-amd64.tar.gz
@@ -154,7 +154,7 @@ which certificate to use.
 
 ### Windows
 
-1. Download `s3bucketferry-0.3.9-windows-amd64.zip`.
+1. Download `s3bucketferry-0.3.10-windows-amd64.zip`.
 2. Right-click the file, select **Extract All**, and extract to a folder such as
    `C:\S3BucketFerry`.
 3. Open **PowerShell** in that folder and run `.\s3bucketferry.exe version`.
@@ -176,8 +176,8 @@ installation.
 and download two files from the release you want:
 
 - the package for the S3BucketFerry machine, for example
-  `s3bucketferry-0.3.9-linux-amd64.tar.gz` or
-  `s3bucketferry-0.3.9-windows-amd64.zip`;
+  `s3bucketferry-0.3.10-linux-amd64.tar.gz` or
+  `s3bucketferry-0.3.10-windows-amd64.zip`;
 - `SHA256SUMS.txt`.
 
 Copy both to the S3BucketFerry machine, for example on a USB drive, over a file
@@ -188,9 +188,9 @@ the same folder.
 
 ```bash
 cd /tmp                                            # the folder you copied the two files to
-sha256sum -c --ignore-missing SHA256SUMS.txt       # must print: s3bucketferry-0.3.9-linux-amd64.tar.gz: OK
+sha256sum -c --ignore-missing SHA256SUMS.txt       # must print: s3bucketferry-0.3.10-linux-amd64.tar.gz: OK
 sudo mkdir -p /opt/s3bucketferry
-sudo tar -xzf s3bucketferry-0.3.9-linux-amd64.tar.gz -C /opt/s3bucketferry --strip-components=1
+sudo tar -xzf s3bucketferry-0.3.10-linux-amd64.tar.gz -C /opt/s3bucketferry --strip-components=1
 sudo ln -sf /opt/s3bucketferry/s3bucketferry /usr/local/bin/s3bucketferry
 s3bucketferry version
 s3bucketferry doctor
@@ -206,7 +206,7 @@ In PowerShell, in the folder you copied the two files to:
 
 ```powershell
 cd D:\                                                     # the folder with the two files
-(Get-FileHash .\s3bucketferry-0.3.9-windows-amd64.zip -Algorithm SHA256).Hash.ToLower()
+(Get-FileHash .\s3bucketferry-0.3.10-windows-amd64.zip -Algorithm SHA256).Hash.ToLower()
 Select-String -Path .\SHA256SUMS.txt -Pattern "windows-amd64.zip"
 ```
 
@@ -214,9 +214,9 @@ The two long values must be identical. (`certutil -hashfile <file> SHA256`
 shows the same value.) Then unpack the program into `C:\S3BucketFerry`:
 
 ```powershell
-Expand-Archive .\s3bucketferry-0.3.9-windows-amd64.zip -DestinationPath $env:TEMP\s3bf
+Expand-Archive .\s3bucketferry-0.3.10-windows-amd64.zip -DestinationPath $env:TEMP\s3bf
 New-Item -ItemType Directory -Force C:\S3BucketFerry | Out-Null
-Copy-Item $env:TEMP\s3bf\s3bucketferry-0.3.9-windows-amd64\* C:\S3BucketFerry -Recurse -Force
+Copy-Item $env:TEMP\s3bf\s3bucketferry-0.3.10-windows-amd64\* C:\S3BucketFerry -Recurse -Force
 cd C:\S3BucketFerry
 .\s3bucketferry.exe version
 .\s3bucketferry.exe doctor
@@ -301,8 +301,20 @@ To keep them for future windows, use `setx SOURCE_ACCESS_KEY "value"` (and so
 on), then open a new PowerShell window. `setx` stores the values in your
 Windows user profile.
 
-Whenever you change a key, restart the web interface so it reads the new
-value.
+**Changing a key later (for example after rotating it).** Edit the keys file.
+Since 0.3.10 the web interface reads the keys file again every time it starts
+a task (a scan, migration, verify, profile test and so on), so the new value
+is used from the next task, with no restart. The first line of each task's
+output says which variables changed since the previous task, by name only:
+
+```text
+Access keys: read 4 variable(s) from /home/ferry/.config/s3bf-keys.env (changed: SOURCE_SECRET_KEY).
+```
+
+A task that is already running keeps the keys it started with. On the command
+line, load the file again in your session (`set -a; . ~/.config/s3bf-keys.env;
+set +a`). Keys set only with `setx` or `$env:` on Windows, without a keys file,
+still need the web interface to be restarted.
 
 ## 5. Connection profiles: source and target
 
@@ -369,9 +381,8 @@ Select **Test** next to a profile to check it. The result opens as a task under
 
 ![A successful profile test](images/05-profile-test.png)
 
-After saving, S3BucketFerry tells you if a variable you named isn't set for
-the web interface yet. Add it to the keys file and restart the web interface
-before you select **Test**.
+After saving, S3BucketFerry tells you if a variable you named isn't in the
+keys file yet. Add it there before you select **Test**; no restart is needed.
 
 ### Edit or fix a profile
 
@@ -387,8 +398,8 @@ settings. Change what you need and select **Save profile**, or **Cancel**.
   shows **(hidden)** with **Edit this profile: a field holds a key, not a
   variable name**. The key is never shown on screen: the edit form leaves that
   field empty. Type the variable name (for example `SOURCE_ACCESS_KEY`), put
-  the real key in the keys file (section 4), save, and restart the web
-  interface.
+  the real key in the keys file (section 4), and save. The next task uses
+  it; no restart is needed.
 
 ![A profile that holds a key: masked in the list, with a warning](images/38-profile-key-warning.png)
 
@@ -634,8 +645,8 @@ Then open the address it printed, for example
 
 Afterwards:
 
-- Put the access keys in the keys file it named (section 4), then
-  `sudo systemctl restart s3bucketferry-ui`.
+- Put the access keys in the keys file it named (section 4). The web
+  interface reads that file for every task, so no restart is needed.
 - Add `export S3BF_HOME=$HOME/.config/s3bucketferry` to `~/.bashrc`, so the
   command line uses the same profiles and job history as the service.
 - To see the settings at any time: `s3bucketferry service show`.
@@ -733,7 +744,10 @@ run these as the user who will own the migrations, not as root.
 
 6. Add `export S3BF_HOME=$HOME/.config/s3bucketferry` to `~/.bashrc`.
 
-After changing the keys file, run `sudo systemctl restart s3bucketferry-ui`.
+The web interface reads the keys file again for every task it starts, so a
+changed key needs no restart. It finds the file through the service's
+`S3BF_KEYS_FILE` setting (written by `service setup` since 0.3.10), the
+service's `EnvironmentFile=` line, or `~/.config/s3bf-keys.env`.
 
 To use the standard HTTPS port 443 instead (so the address needs no port),
 use `--listen 0.0.0.0:443` and add the line
@@ -1393,12 +1407,19 @@ installs next to the program. It:
    release;
 2. downloads them and checks each against its published SHA-256 checksum. A
    mismatch stops it, with nothing changed;
-3. refuses to start while a migration is running;
+3. refuses to start while a migration is running (restarting the web interface
+   would stop the tasks it started);
 4. keeps a complete copy of the current install in `<install folder>.previous`
    (normally `/opt/s3bucketferry.previous`), for rollback;
 5. replaces the program files;
-6. restarts the `s3bucketferry-ui` service, if there is one, and checks it is
-   running;
+6. restarts every S3BucketFerry service that is running or enabled (normally
+   just `s3bucketferry-ui`), and checks each one is running the new version.
+   Restarting a service needs root: if you run `s3bucketferry upgrade`
+   without `sudo`, it asks for your sudo password **before** changing
+   anything, so the web interface never keeps running the old version. If it
+   can't get root, it stops with nothing changed. It also warns about a web
+   interface started by hand (`s3bucketferry ui` in a terminal), which you
+   restart yourself;
 7. if that service wasn't set up with `service setup` (section 6), offers to
    run it, so you can choose HTTPS on 8443 or HTTP on 8080 and the
    certificate. With `--yes`, it prints the command instead.
@@ -1469,7 +1490,7 @@ Upgrade S3BucketFerry to 0.3.3? [Y/n] y
   installed: s3bucketferry 0.3.3, rclone v1.76.0
 rclone v1.76.0 is up to date
   restarted the s3bucketferry-ui service
-  s3bucketferry-ui is running
+  s3bucketferry-ui is running s3bucketferry 0.3.3
 
 install folder: /opt/s3bucketferry
                 installed    newest
@@ -1507,7 +1528,7 @@ previous: s3bucketferry 0.3.2, rclone v1.76.0
 Go back to the previous install? [Y/n] y
   restored. The version you rolled back from is kept in /opt/s3bucketferry.previous (run --rollback again to return to it)
   restarted the s3bucketferry-ui service
-  s3bucketferry-ui is running
+  s3bucketferry-ui is running s3bucketferry 0.3.2
 ```
 
 - The two installs swap places, so running `--rollback` again returns to the
@@ -1527,9 +1548,10 @@ Go back to the previous install? [Y/n] y
 | `sudo s3bucketferry upgrade --tool-only` | Upgrade only S3BucketFerry, with the rclone in its package. |
 | `sudo s3bucketferry upgrade --version 0.3.2` | Install one specific version, newer or older. |
 | `--yes` | Don't ask for confirmation. |
-| `--force` | Upgrade even though a migration seems to be running. Use only if you are sure nothing is running. |
+| `--force` | Upgrade even though a migration seems to be running. The restart stops tasks the web interface started; resume them afterwards. Use only if you are sure. |
 | `--dir FOLDER` | The install folder, if it isn't where `s3bucketferry` is found. |
-| `--service NAME` | The service to restart, if it isn't `s3bucketferry-ui`. |
+| `--service NAME` | Restart only this service. Without it, every `s3bucketferry*` service that is running or enabled is restarted. |
+| `--no-restart` | Change the files only. Running services keep the old version until you run `sudo systemctl restart s3bucketferry-ui`. |
 
 To change how the web interface service runs (HTTP or HTTPS, the port, the
 certificate), use `sudo s3bucketferry service setup` (section 6). The upgrade
@@ -1598,7 +1620,7 @@ upgrade.
 
 ```bash
 s3bucketferry version                                           # what you have now
-sudo s3bucketferry upgrade --package /tmp/s3bucketferry-0.3.9-linux-amd64.tar.gz
+sudo s3bucketferry upgrade --package /tmp/s3bucketferry-0.3.10-linux-amd64.tar.gz
 ```
 
 It works exactly like the online upgrade (13.3): it checks the package against
@@ -1637,9 +1659,9 @@ the copy is complete and unaltered.
 
 ```bash
 cd /tmp
-tar -xzf s3bucketferry-0.3.9-linux-amd64.tar.gz
-sudo bash s3bucketferry-0.3.9-linux-amd64/upgrade.sh --dir /opt/s3bucketferry \
-     --package /tmp/s3bucketferry-0.3.9-linux-amd64.tar.gz
+tar -xzf s3bucketferry-0.3.10-linux-amd64.tar.gz
+sudo bash s3bucketferry-0.3.10-linux-amd64/upgrade.sh --dir /opt/s3bucketferry \
+     --package /tmp/s3bucketferry-0.3.10-linux-amd64.tar.gz
 ```
 
 From then on use `sudo s3bucketferry upgrade --package ...`.
@@ -1656,7 +1678,7 @@ instead of downloaded. In PowerShell:
 
 ```powershell
 cd D:\                                                     # the folder with the copied files
-(Get-FileHash .\s3bucketferry-0.3.9-windows-amd64.zip -Algorithm SHA256).Hash.ToLower()
+(Get-FileHash .\s3bucketferry-0.3.10-windows-amd64.zip -Algorithm SHA256).Hash.ToLower()
 Select-String -Path .\SHA256SUMS.txt -Pattern "windows-amd64.zip"   # must show the same value
 ```
 
@@ -1665,8 +1687,8 @@ Stop the web interface (Ctrl+C in its window), then:
 ```powershell
 Remove-Item C:\S3BucketFerry.previous -Recurse -Force -ErrorAction SilentlyContinue
 Copy-Item C:\S3BucketFerry C:\S3BucketFerry.previous -Recurse           # your rollback copy
-Expand-Archive .\s3bucketferry-0.3.9-windows-amd64.zip -DestinationPath $env:TEMP\s3bf -Force
-Copy-Item $env:TEMP\s3bf\s3bucketferry-0.3.9-windows-amd64\* C:\S3BucketFerry -Recurse -Force
+Expand-Archive .\s3bucketferry-0.3.10-windows-amd64.zip -DestinationPath $env:TEMP\s3bf -Force
+Copy-Item $env:TEMP\s3bf\s3bucketferry-0.3.10-windows-amd64\* C:\S3BucketFerry -Recurse -Force
 C:\S3BucketFerry\s3bucketferry.exe version
 ```
 
@@ -1706,6 +1728,9 @@ To roll back, stop the web interface and copy the files from
 | `... is for linux/arm64, but this machine is linux/amd64` | The copied package is for another CPU. Copy the one matching this machine (`uname -m`: `x86_64` is amd64, `aarch64` is arm64). |
 | `unknown option --package` | The installed `upgrade.sh` is from 0.3.5 or earlier. Use the `upgrade.sh` inside the new package once (13.9). |
 | `could not find the newest release on GitHub` on a machine without internet | `upgrade` and `upgrade --check` need internet access. Use the offline upgrade (13.9). |
+| `the upgrade must restart s3bucketferry-ui ... and that needs root` | Run `sudo s3bucketferry upgrade`. Nothing was changed. (It asks for sudo by itself when it can; this appears when there is no terminal to type the password, for example in a script.) |
+| `version` shows the new version but the web interface still looks old | The service wasn't restarted, for example after an upgrade with `--no-restart` or by a version before 0.3.10. Run `sudo systemctl restart s3bucketferry-ui`. |
+| `a web interface started by hand (process N) still runs the old version` | Stop it (`kill N`) and start it again, or use the service instead (section 6). |
 | The web interface doesn't start after an upgrade | `sudo journalctl -u s3bucketferry-ui -n 30`; if the new version is at fault, run `sudo s3bucketferry upgrade --rollback`. |
 
 ## 14. Where data is kept
@@ -1766,11 +1791,12 @@ versioning, lifecycle rules, bucket policies and Object Lock defaults.
 
 | Problem | Likely cause | What to do |
 |---|---|---|
-| `environment variables X and Y must both be set` | The key variables aren't loaded in this session or for the web interface | Load the keys (section 4); after changing the keys file, restart the web interface. |
+| `environment variables X and Y must both be set` | The variables aren't in the keys file, or (command line) aren't loaded in this session | Add them to the keys file (section 4). The web interface reads it for every task; on the command line, load it again in your session. The first line of the task output names the keys file used. |
+| Task output: `keys file ... not found` or `cannot read the keys file` | The keys file named in the service is missing, or the service user can't read it | Create it, or fix its owner: `sudo chown <service user> <file>; sudo chmod 600 <file>`. The task used the keys the web interface started with. |
 | `a key variable field holds what looks like a real key` (when saving or testing a profile) | The access key or secret key itself was typed into a key variable field | Type the variable **name**, for example `SOURCE_ACCESS_KEY`, and put the key in the keys file (section 4). For an existing profile, select **Edit** on the profiles page (section 5, "Edit or fix a profile"). |
-| The profiles page shows **(hidden)** and **Edit this profile: a field holds a key** | The profile was saved with a key instead of a variable name, usually by a version before 0.3.9 | Select **Edit**, type the variable names, save, and restart the web interface. Then rotate that key pair on the storage system: it was stored in plain text. |
+| The profiles page shows **(hidden)** and **Edit this profile: a field holds a key** | The profile was saved with a key instead of a variable name, usually by a version before 0.3.9 | Select **Edit**, type the variable names, and save. Then rotate that key pair on the storage system: it was stored in plain text. |
 | `don't start a key variable name with RCLONE_` | rclone reads `RCLONE_...` variables as its own settings | Rename the variable in the keys file, for example `SOURCE_ACCESS_KEY`, and use that name in the profile. |
-| `InvalidAccessKeyId` or `SignatureDoesNotMatch` | Wrong key, or a space or quote pasted with it | Check the values in your keys file; restart the web interface after changes. |
+| `InvalidAccessKeyId` or `SignatureDoesNotMatch` | Wrong key, or a space or quote pasted with it | Check the values in your keys file. The next task uses the new values; check its first line says the variable "changed". |
 | Error mentioning the region, or `AuthorizationHeaderMalformed` | The storage expects a specific region | Set the profile's region to the one your administrators gave you. |
 | `AccessDenied` | The key lacks a permission | See the permissions in section 2. For bucket creation, create the target bucket first and tick **Target bucket already exists**. |
 | `x509: certificate signed by unknown authority` | HTTPS certificate from a private certificate authority | Add the CA file to the profile (`--ca-cert`). |
