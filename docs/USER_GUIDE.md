@@ -1,6 +1,6 @@
 # S3BucketFerry User Guide
 
-Version 0.3.10
+Version 0.4.0
 
 S3BucketFerry ("S3 Bucket Ferry") copies buckets from one S3-compatible storage
 system to another, checks every object, and issues a migration certificate at
@@ -89,7 +89,7 @@ Ask for these for **both** the source and the target:
 | Secret key | (a long random string) | Like a password. Keep it secret. |
 | Region | `us-east-1` | Many on-premises systems accept any value or none. Ask if unsure. |
 | Bucket names | `photos` | The source bucket to copy, and the target bucket to copy into. |
-| CA certificate | `storage-ca.pem` | Only if the endpoint uses an HTTPS certificate from a private certificate authority. |
+| CA certificate | `storage-ca.pem` | Only if the endpoint uses an HTTPS certificate from the customer's own (private) certificate authority. Ask for the CA certificate in PEM format, and for its SHA-256 fingerprint so you can check it (section 5, "HTTPS certificates of the storage systems"). |
 
 The keys need these permissions:
 
@@ -114,11 +114,11 @@ browser without internet access, and `USER_GUIDE.md`. Packages are on the
 
 | System | Package |
 |---|---|
-| Linux, Intel/AMD | `s3bucketferry-0.3.10-linux-amd64.tar.gz` |
-| Linux, ARM | `s3bucketferry-0.3.10-linux-arm64.tar.gz` |
-| Windows | `s3bucketferry-0.3.10-windows-amd64.zip` |
-| macOS, Intel | `s3bucketferry-0.3.10-macos-amd64.tar.gz` |
-| macOS, Apple silicon | `s3bucketferry-0.3.10-macos-arm64.tar.gz` |
+| Linux, Intel/AMD | `s3bucketferry-0.4.0-linux-amd64.tar.gz` |
+| Linux, ARM | `s3bucketferry-0.4.0-linux-arm64.tar.gz` |
+| Windows | `s3bucketferry-0.4.0-windows-amd64.zip` |
+| macOS, Intel | `s3bucketferry-0.4.0-macos-amd64.tar.gz` |
+| macOS, Apple silicon | `s3bucketferry-0.4.0-macos-arm64.tar.gz` |
 
 Every release also has `SHA256SUMS.txt`, which lets you confirm the download
 is complete and unaltered.
@@ -132,7 +132,7 @@ below and section 13.9. You never need Git.
 ### Linux
 
 ```bash
-VER=0.3.10
+VER=0.4.0
 BASE=https://github.com/debkhadanga2023-lgtm/S3BucketFerry/releases/download/v$VER
 cd /tmp
 curl -fLO $BASE/s3bucketferry-$VER-linux-amd64.tar.gz
@@ -154,7 +154,7 @@ which certificate to use.
 
 ### Windows
 
-1. Download `s3bucketferry-0.3.10-windows-amd64.zip`.
+1. Download `s3bucketferry-0.4.0-windows-amd64.zip`.
 2. Right-click the file, select **Extract All**, and extract to a folder such as
    `C:\S3BucketFerry`.
 3. Open **PowerShell** in that folder and run `.\s3bucketferry.exe version`.
@@ -176,8 +176,8 @@ installation.
 and download two files from the release you want:
 
 - the package for the S3BucketFerry machine, for example
-  `s3bucketferry-0.3.10-linux-amd64.tar.gz` or
-  `s3bucketferry-0.3.10-windows-amd64.zip`;
+  `s3bucketferry-0.4.0-linux-amd64.tar.gz` or
+  `s3bucketferry-0.4.0-windows-amd64.zip`;
 - `SHA256SUMS.txt`.
 
 Copy both to the S3BucketFerry machine, for example on a USB drive, over a file
@@ -188,9 +188,9 @@ the same folder.
 
 ```bash
 cd /tmp                                            # the folder you copied the two files to
-sha256sum -c --ignore-missing SHA256SUMS.txt       # must print: s3bucketferry-0.3.10-linux-amd64.tar.gz: OK
+sha256sum -c --ignore-missing SHA256SUMS.txt       # must print: s3bucketferry-0.4.0-linux-amd64.tar.gz: OK
 sudo mkdir -p /opt/s3bucketferry
-sudo tar -xzf s3bucketferry-0.3.10-linux-amd64.tar.gz -C /opt/s3bucketferry --strip-components=1
+sudo tar -xzf s3bucketferry-0.4.0-linux-amd64.tar.gz -C /opt/s3bucketferry --strip-components=1
 sudo ln -sf /opt/s3bucketferry/s3bucketferry /usr/local/bin/s3bucketferry
 s3bucketferry version
 s3bucketferry doctor
@@ -206,7 +206,7 @@ In PowerShell, in the folder you copied the two files to:
 
 ```powershell
 cd D:\                                                     # the folder with the two files
-(Get-FileHash .\s3bucketferry-0.3.10-windows-amd64.zip -Algorithm SHA256).Hash.ToLower()
+(Get-FileHash .\s3bucketferry-0.4.0-windows-amd64.zip -Algorithm SHA256).Hash.ToLower()
 Select-String -Path .\SHA256SUMS.txt -Pattern "windows-amd64.zip"
 ```
 
@@ -214,9 +214,9 @@ The two long values must be identical. (`certutil -hashfile <file> SHA256`
 shows the same value.) Then unpack the program into `C:\S3BucketFerry`:
 
 ```powershell
-Expand-Archive .\s3bucketferry-0.3.10-windows-amd64.zip -DestinationPath $env:TEMP\s3bf
+Expand-Archive .\s3bucketferry-0.4.0-windows-amd64.zip -DestinationPath $env:TEMP\s3bf
 New-Item -ItemType Directory -Force C:\S3BucketFerry | Out-Null
-Copy-Item $env:TEMP\s3bf\s3bucketferry-0.3.10-windows-amd64\* C:\S3BucketFerry -Recurse -Force
+Copy-Item $env:TEMP\s3bf\s3bucketferry-0.4.0-windows-amd64\* C:\S3BucketFerry -Recurse -Force
 cd C:\S3BucketFerry
 .\s3bucketferry.exe version
 .\s3bucketferry.exe doctor
@@ -344,8 +344,9 @@ enough: use it as both source and target.
 | Region | `--region` | The region your administrators gave you. Leave it empty if none. |
 | Access key variable | `--access-key-env` | The **name** of the variable, for example `SOURCE_ACCESS_KEY`. **Not the key itself.** |
 | Secret key variable | `--secret-key-env` | The **name** of the variable, for example `SOURCE_SECRET_KEY`. **Not the secret key itself.** Don't start the name with `RCLONE_`. |
-| CA certificate file | `--ca-cert` | Only for HTTPS endpoints whose certificate comes from a private certificate authority: the path of its PEM file on this machine. |
-| Do not verify the TLS certificate | `--insecure-tls` | For tests only. It turns off a security check. |
+| HTTPS certificate: import a file, or paste it | `--ca-cert-import FILE` | Only for HTTPS endpoints whose certificate comes from the customer's own certificate authority (CA): the CA certificate in PEM format. A copy is kept with the profile. See "HTTPS certificates of the storage systems" below. |
+| HTTPS certificate: a file already on the server | `--ca-cert FILE` | The same, but the profile refers to the file where it is instead of keeping a copy. |
+| Do not verify the certificate | `--insecure-tls` | Bypass, for tests only: turns off the certificate check for this profile's endpoint. |
 | rclone remote | `--rclone-remote` | Advanced: use a remote that already exists in your rclone configuration instead of the fields above. |
 
 The most common mistake is typing the key itself into a key variable field.
@@ -368,9 +369,13 @@ variable names.
 4. Region, if your storage needs one.
 5. Name of the variable holding the access key (not the key).
 6. Name of the variable holding the secret key (not the key).
-7. CA certificate file, only for a private certificate authority.
-8. An existing rclone remote, as an alternative to fields 2 to 7.
-9. **Save profile**.
+7. HTTPS certificate of the storage: import the customer's CA certificate
+   file, only for a private certificate authority. Leave empty otherwise.
+8. Or paste the certificate text (`-----BEGIN CERTIFICATE-----` ...).
+9. Or refer to a certificate file that is already on the server.
+10. Do not verify the certificate: the bypass, for tests only.
+11. An existing rclone remote, as an alternative to fields 2 to 10.
+12. **Save profile**.
 
 Both profiles then appear at the top of the page:
 
@@ -410,6 +415,92 @@ that key pair on the storage system and put the new values in the keys file.
 On the command line, change a profile by running `profile add` again with the
 same `--name` and all the settings: the new settings replace the old ones.
 
+### HTTPS certificates of the storage systems
+
+Storage systems inside a company usually have an HTTPS certificate issued by
+the company's own **certificate authority (CA)**, not by a public one. Your
+machine doesn't know that CA, so connections fail with
+`x509: certificate signed by unknown authority` until you give the profile the
+CA certificate. Do this for each profile that needs it: the source and target
+can each have a different customer CA, and a profile without one keeps
+trusting the usual public CAs.
+
+**Get the certificate.** Ask the storage administrators for:
+
+- the **CA certificate** (the root, plus any intermediate CA) in **PEM**
+  format: a text file starting with `-----BEGIN CERTIFICATE-----`. If the
+  storage uses a self-signed certificate instead, its own certificate works
+  too;
+- its **SHA-256 fingerprint**, so you can check you have the right file. The
+  web interface and the command line show the fingerprint after the import.
+
+Never accept a private key: S3BucketFerry refuses a file that contains one. A
+`.cer` or `.der` file in binary (DER) format converts with
+`openssl x509 -inform der -in ca.cer -out ca.pem`.
+
+**Import it in the web interface.** In the profile form (add, or **Edit**),
+under **HTTPS certificate of this storage**, choose the file or paste its
+text, and select **Save profile**. The page confirms the import with the
+certificate's name and expiry date. The profiles list shows **Imported CA**
+with the name and expiry date in the **TLS** column, and **Edit** shows the
+details, the fingerprint and **Remove this certificate**:
+
+![Editing a profile with an imported certificate](images/37-profile-edit.png)
+
+**Import it on the command line:**
+
+```bash
+s3bucketferry profile add --name source-s3 --endpoint https://s3.source.example.com:9021 \
+  --access-key-env SOURCE_ACCESS_KEY --secret-key-env SOURCE_SECRET_KEY \
+  --ca-cert-import ~/customer-storage-ca.pem
+```
+
+```text
+certificate : Example Bank Storage Root CA (issued by Example Bank Storage Root CA)
+  valid until: 2028-10-23
+  SHA-256    : 46:0F:19:C9:99:61:B5:AB:29:0C:C6:C4:FB:79:CC:16:3C:C8:44:40:2C:AF:FC:71:7A:79:2C:05:40:E5:72:0C
+imported the certificate to /home/ferry/.config/s3bucketferry/certs/source-s3.pem
+saved profile "source-s3"
+```
+
+An imported certificate is kept in the state folder (`certs/<profile>.pem`),
+so the original file can be moved or deleted. To refer to a file that stays
+where it is instead (for example one your administrators keep up to date in
+`/etc/pki`), use `--ca-cert FILE`, or the web form's "use a certificate file
+already on the server". Either way, the file is checked when you save.
+
+**Check it.** Select **Test** (or `s3bucketferry profile test --name
+source-s3`). The first line says how the certificate is checked, for example
+`TLS: verified with the profile's certificate "Example Bank Storage Root CA"
+(SHA-256 46:0F:...)`. Each migration certificate also records this for the
+source and the target.
+
+**Expiry.** The profiles list marks an expired certificate, and the edit form
+warns 30 days before. When the customer renews its CA, import the new
+certificate; when only the storage's own certificate is renewed by the same
+CA, nothing changes here.
+
+**The bypass: "Do not verify the certificate".** Tick it (or use
+`--insecure-tls`) to skip the check for this profile's endpoint. Use it only
+for tests: without the check, a machine in the network path could pretend to
+be the storage and read the keys and the data. The bypass applies to that
+profile only; the other endpoint is still checked. The profiles list shows
+**NOT VERIFIED**, and a migration certificate made with it says so in its
+limitations.
+
+**What is checked for each profile:**
+
+| Profile setting | The endpoint's certificate is checked against |
+|---|---|
+| No certificate (default) | The public CAs this machine trusts |
+| Imported certificate, or a certificate file | That certificate only |
+| Do not verify the certificate | Nothing (not checked) |
+| `http://` endpoint | No HTTPS, nothing to check |
+
+Since 0.4.0, these settings apply to each profile's own endpoint. Before, a
+certificate given for one profile replaced the trusted CAs for both ends of a
+migration, and the bypass on one profile turned off checks for both.
+
 ### Add the profiles on the command line
 
 ```bash
@@ -433,10 +524,19 @@ keys are read at run time from SOURCE_ACCESS_KEY and SOURCE_SECRET_KEY; nothing 
 Other examples:
 
 ```bash
-# HTTPS endpoint with a certificate from a private certificate authority
+# HTTPS endpoint with a certificate from the customer's own CA: import it
+s3bucketferry profile add --name source-s3 --endpoint https://s3.source.example.com:9021 \
+  --access-key-env SOURCE_ACCESS_KEY --secret-key-env SOURCE_SECRET_KEY \
+  --ca-cert-import ~/customer-storage-ca.pem
+
+# the same, referring to a CA file kept on this machine by your administrators
 s3bucketferry profile add --name source-s3 --endpoint https://s3.source.example.com:9021 \
   --access-key-env SOURCE_ACCESS_KEY --secret-key-env SOURCE_SECRET_KEY \
   --ca-cert /etc/pki/tls/certs/storage-ca.pem
+
+# a test system: don't verify its certificate (this profile only)
+s3bucketferry profile add --name test-lab --endpoint https://10.0.0.15:9000 \
+  --access-key-env LAB_ACCESS_KEY --secret-key-env LAB_SECRET_KEY --insecure-tls
 
 # a specific provider type
 s3bucketferry profile add --name target-s3 --provider Ceph --endpoint https://rgw.example.com \
@@ -1428,6 +1528,9 @@ Your profiles, jobs, reports, certificates, web users and keys file are in
 the state folder (section 14) and are never touched by an upgrade or a
 rollback.
 
+Upgrading from 0.3.9 or earlier? See "Upgrading to 0.3.10" in 13.6 for the
+two steps to do once afterwards (and "Upgrading to 0.4.0").
+
 No internet on the S3BucketFerry machine? Copy the new package there and use
 the offline upgrade (13.9); it does the same checks, backup and restart.
 
@@ -1557,6 +1660,46 @@ To change how the web interface service runs (HTTP or HTTPS, the port, the
 certificate), use `sudo s3bucketferry service setup` (section 6). The upgrade
 leaves those settings as they are.
 
+### Upgrading to 0.4.0
+
+- From **0.3.10**: `sudo s3bucketferry upgrade` is all you need. It restarts
+  the web interface by itself.
+- From **0.3.9 or earlier**: also do the two steps in "Upgrading to 0.3.10"
+  below, once.
+
+Profiles keep their settings. A profile that already names a CA file
+(`--ca-cert`) keeps referring to it; to keep a copy with the profile instead,
+**Edit** it and import the file. Since 0.4.0, each profile's certificate and
+bypass apply to its own endpoint only (section 5, "HTTPS certificates of the
+storage systems"). If you used the bypass on one profile to reach the other
+end too, give that other profile its own certificate.
+
+### Upgrading to 0.3.10: two steps, once
+
+An upgrade from 0.3.9 or earlier runs the **old** `upgrade.sh`, which doesn't
+restart the web interface for you. So this one time:
+
+```bash
+sudo s3bucketferry upgrade
+sudo systemctl restart s3bucketferry-ui        # 1. needed once, after this upgrade
+sudo s3bucketferry service setup               # 2. recommended: records where the keys file is
+s3bucketferry version                           # should print s3bucketferry 0.3.10
+```
+
+1. **Restart the web interface.** Until you do, it keeps running the old
+   version: no keys reload, and the old screens. Check: the first line of the
+   next task's output starts with `Access keys: read ...`.
+2. **Run `service setup` once (recommended).** It writes the keys file's
+   location into the service (`S3BF_KEYS_FILE`), so the web interface always
+   finds the file it reads before every task. Press Enter to keep each current
+   answer. It restarts the service when it finishes, so it also covers step 1.
+   Without this step it still finds the file through the service's
+   `EnvironmentFile=` line or at `~/.config/s3bf-keys.env`. If the first line of
+   a task says `keys file ... not found`, run this step.
+
+From 0.3.10 on, `upgrade` restarts the web interface by itself (13.3, step 6),
+so the first step is no longer needed.
+
 ### Upgrading to 0.3.5: choose HTTP or HTTPS for the service
 
 Since 0.3.4, the web interface serves HTTPS whenever it listens on a network
@@ -1620,7 +1763,7 @@ upgrade.
 
 ```bash
 s3bucketferry version                                           # what you have now
-sudo s3bucketferry upgrade --package /tmp/s3bucketferry-0.3.10-linux-amd64.tar.gz
+sudo s3bucketferry upgrade --package /tmp/s3bucketferry-0.4.0-linux-amd64.tar.gz
 ```
 
 It works exactly like the online upgrade (13.3): it checks the package against
@@ -1659,9 +1802,9 @@ the copy is complete and unaltered.
 
 ```bash
 cd /tmp
-tar -xzf s3bucketferry-0.3.10-linux-amd64.tar.gz
-sudo bash s3bucketferry-0.3.10-linux-amd64/upgrade.sh --dir /opt/s3bucketferry \
-     --package /tmp/s3bucketferry-0.3.10-linux-amd64.tar.gz
+tar -xzf s3bucketferry-0.4.0-linux-amd64.tar.gz
+sudo bash s3bucketferry-0.4.0-linux-amd64/upgrade.sh --dir /opt/s3bucketferry \
+     --package /tmp/s3bucketferry-0.4.0-linux-amd64.tar.gz
 ```
 
 From then on use `sudo s3bucketferry upgrade --package ...`.
@@ -1678,7 +1821,7 @@ instead of downloaded. In PowerShell:
 
 ```powershell
 cd D:\                                                     # the folder with the copied files
-(Get-FileHash .\s3bucketferry-0.3.10-windows-amd64.zip -Algorithm SHA256).Hash.ToLower()
+(Get-FileHash .\s3bucketferry-0.4.0-windows-amd64.zip -Algorithm SHA256).Hash.ToLower()
 Select-String -Path .\SHA256SUMS.txt -Pattern "windows-amd64.zip"   # must show the same value
 ```
 
@@ -1687,8 +1830,8 @@ Stop the web interface (Ctrl+C in its window), then:
 ```powershell
 Remove-Item C:\S3BucketFerry.previous -Recurse -Force -ErrorAction SilentlyContinue
 Copy-Item C:\S3BucketFerry C:\S3BucketFerry.previous -Recurse           # your rollback copy
-Expand-Archive .\s3bucketferry-0.3.10-windows-amd64.zip -DestinationPath $env:TEMP\s3bf -Force
-Copy-Item $env:TEMP\s3bf\s3bucketferry-0.3.10-windows-amd64\* C:\S3BucketFerry -Recurse -Force
+Expand-Archive .\s3bucketferry-0.4.0-windows-amd64.zip -DestinationPath $env:TEMP\s3bf -Force
+Copy-Item $env:TEMP\s3bf\s3bucketferry-0.4.0-windows-amd64\* C:\S3BucketFerry -Recurse -Force
 C:\S3BucketFerry\s3bucketferry.exe version
 ```
 
@@ -1750,6 +1893,7 @@ share the history only when they use the same folder.
 |---|---|
 | `users.json` | Web accounts: names, access levels and salted password hashes (PBKDF2-SHA256), never plain passwords |
 | `profiles.json`, `notify.json` | Settings, without keys or passwords |
+| `certs/` | HTTPS certificates imported into profiles (`<profile>.pem`); public certificates, no private keys |
 | `jobs/` | One record per job, and the live status of running jobs |
 | `logs/` | rclone logs and failed-object lists |
 | `reports/` | Check reports, dry-run plans and bucket manifests |
@@ -1799,7 +1943,12 @@ versioning, lifecycle rules, bucket policies and Object Lock defaults.
 | `InvalidAccessKeyId` or `SignatureDoesNotMatch` | Wrong key, or a space or quote pasted with it | Check the values in your keys file. The next task uses the new values; check its first line says the variable "changed". |
 | Error mentioning the region, or `AuthorizationHeaderMalformed` | The storage expects a specific region | Set the profile's region to the one your administrators gave you. |
 | `AccessDenied` | The key lacks a permission | See the permissions in section 2. For bucket creation, create the target bucket first and tick **Target bucket already exists**. |
-| `x509: certificate signed by unknown authority` | HTTPS certificate from a private certificate authority | Add the CA file to the profile (`--ca-cert`). |
+| `x509: certificate signed by unknown authority` | The storage's HTTPS certificate comes from the customer's own CA | Import the CA certificate into the profile: **Edit** > **HTTPS certificate of this storage**, or `--ca-cert-import FILE` (section 5, "HTTPS certificates of the storage systems"). The bypass is for tests only. |
+| `x509: certificate has expired or is not yet valid` | The storage's certificate expired, or this machine's clock is wrong | Ask the storage administrators to renew it; check the clock (`timedatectl`). |
+| `x509: certificate is valid for <name>, not <other>` | The endpoint URL uses a name or IP address the certificate doesn't cover | Use the host name the certificate was issued for in the endpoint URL. |
+| `the file contains a private key` when importing | A key file, or a file with both, was given | Give only the certificate. The private key stays on the storage system. |
+| `no certificate found: expected a PEM file` when importing | The file is binary (DER) or not a certificate | Convert it: `openssl x509 -inform der -in ca.cer -out ca.pem`. |
+| Profiles list: certificate **EXPIRED** | The imported certificate's end date has passed | Import the customer's new CA certificate (**Edit**). |
 | `NoSuchBucket` | Bucket name typo, or the endpoint expects bucket names in the host name | Check the name. Keep the provider on **Other**, which uses path-style addressing. |
 | `RequestTimeTooSkewed` | This machine's clock is wrong | Fix the time: `timedatectl` (Linux), or **Settings > Time & language** (Windows). |
 | Connection refused or timeouts | Wrong endpoint or port, firewall, or the storage is down | Test with `curl -I <endpoint>` from this machine. |
@@ -1842,6 +1991,10 @@ first, such as host names or bucket names you don't want to publish.
 | Region | A location name some storage systems use for buckets, such as `us-east-1`. |
 | Source, target | The storage you copy from, and the storage you copy to. |
 | Connection profile | S3BucketFerry's saved settings for reaching one storage system. |
+| HTTPS certificate | What a storage system shows to prove its identity on an `https://` connection. |
+| Certificate authority (CA) | Who issues HTTPS certificates. A company's own CA must be imported into the profile; public CAs are already trusted. |
+| PEM | The text format for certificates, starting with `-----BEGIN CERTIFICATE-----`. |
+| Fingerprint (SHA-256) | A short value that identifies a certificate; compare it with the one the administrators give you. |
 | Location | A profile plus a bucket and optional prefix, such as `source-s3:photos/2026`. |
 | Dry run | A run that only reports what would change, and changes nothing. |
 | Checksum (MD5) | A fingerprint of an object's contents; equal checksums mean equal contents. |

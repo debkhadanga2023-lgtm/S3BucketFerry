@@ -1,6 +1,56 @@
 # Changelog
 
+## 0.4.0 - 2026-11-23
+
+**Upgrading:** from 0.3.10, `sudo s3bucketferry upgrade` is enough. From 0.3.9
+or earlier, also restart the web interface once (see 0.3.10 below). User
+guide, section 13, "Upgrading to 0.4.0".
+
+- **Import the storage's HTTPS certificate into a profile.** For storage with
+  a certificate from the customer's own CA: in the web interface, choose the
+  PEM file or paste it in the profile form (add or Edit); on the command line,
+  `profile add ... --ca-cert-import FILE`. The certificate is checked
+  (refused if it holds a private key or isn't PEM) and a copy is kept in the
+  state folder (`certs/<profile>.pem`). Its name, issuer, expiry and SHA-256
+  fingerprint are shown after the import and on the edit form, which can also
+  remove it. The profiles list and `profile list` show the certificate and its
+  expiry, and flag an expired one. `--ca-cert FILE` (refer to a file on the
+  server) still works and is now checked too. Removing a profile removes its
+  imported certificate.
+- **Each profile's certificate and bypass apply to its own endpoint only.**
+  rclone's global `--ca-cert` replaces the system's trusted CAs for every
+  endpoint, and `--no-check-certificate` turns checks off for every endpoint.
+  S3BucketFerry now passes them per endpoint (rclone connection-string
+  overrides), so the source and target can each have their own customer CA, a
+  profile without one keeps trusting the public CAs, and the bypass on one
+  profile no longer turns checks off for the other. Tested against two HTTPS
+  S3 servers with different private CAs.
+- **Bypass ("Do not verify the certificate", `--insecure-tls`)** is explained
+  in the form, warned about when saved, and shown as **NOT VERIFIED** in the
+  list.
+- **Migration certificates record how each endpoint's HTTPS certificate was
+  checked** (source and target), with the CA's name and fingerprint; a bypass
+  adds a limitation line.
+- `profile test` prints how the certificate is checked, and explains common
+  TLS errors (unknown authority, expired, wrong name, HTTP endpoint).
+- The web interface accepts file uploads (forms are limited to 4 MB).
+- The profile form's key reminder no longer says to restart the web interface
+  (not needed since 0.3.10).
+- User guide: new "HTTPS certificates of the storage systems" in section 5,
+  updated form screenshots and steps, command-line examples, "Upgrading to
+  0.4.0", `certs/` in section 14, six troubleshooting rows, glossary. Help page
+  updated to match.
+- Tests: PEM parsing, import, summaries and hints; per-profile overrides,
+  including Windows paths; web upload, paste, keep on edit, remove, bypass.
+
 ## 0.3.10 - 2026-11-23
+
+**Upgrading from 0.3.9 or earlier, once:** after `sudo s3bucketferry upgrade`,
+run `sudo systemctl restart s3bucketferry-ui` (the old upgrade script doesn't
+restart it), and preferably `sudo s3bucketferry service setup` (press Enter
+for each answer) so the service records where the keys file is; it restarts
+the service too. User guide,
+section 13, "Upgrading to 0.3.10".
 
 - **Changed keys are used without a restart.** The web interface reads the
   keys file again before every task it starts (scan, migrate, verify, cutover,
@@ -25,7 +75,7 @@
   after key changes; upgrade restarts and asks for sudo; new messages). Help
   page updated to match.
 - Tests: keys file parsing, change detection without values, a task getting
-  the current value; service file round trip with `S3BF_KEYS_FILE`; upgrade
+  the current value (portable: also on Windows); service file round trip with `S3BF_KEYS_FILE`; upgrade
   restarts running services only, refuses without root before changing
   anything, and `--no-restart`.
 
