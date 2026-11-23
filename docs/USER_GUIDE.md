@@ -1,6 +1,6 @@
 # S3BucketFerry User Guide
 
-Version 0.3.8
+Version 0.3.9
 
 S3BucketFerry ("S3 Bucket Ferry") copies buckets from one S3-compatible storage
 system to another, checks every object, and issues a migration certificate at
@@ -37,7 +37,7 @@ The screenshots and sample output in this guide come from real migrations
 between two test S3 servers, `source-s3.example.com` and `target-s3.example.com`,
 mostly made with version 0.3.2. The screens are the same in later versions,
 except for the **User guide** link added in 0.3.3. Since 0.3.4 the web interface
-uses HTTPS (section 6), and since 0.3.5 `service setup` sets up its service. Your names, numbers and dates will differ.
+uses HTTPS (section 6), and since 0.3.5 `service setup` sets up its service. The profiles page gained **Edit** and a reminder about key variable names in 0.3.9. Your names, numbers and dates will differ.
 
 This guide is also built into the web interface: **Support > User guide**.
 
@@ -114,11 +114,11 @@ browser without internet access, and `USER_GUIDE.md`. Packages are on the
 
 | System | Package |
 |---|---|
-| Linux, Intel/AMD | `s3bucketferry-0.3.8-linux-amd64.tar.gz` |
-| Linux, ARM | `s3bucketferry-0.3.8-linux-arm64.tar.gz` |
-| Windows | `s3bucketferry-0.3.8-windows-amd64.zip` |
-| macOS, Intel | `s3bucketferry-0.3.8-macos-amd64.tar.gz` |
-| macOS, Apple silicon | `s3bucketferry-0.3.8-macos-arm64.tar.gz` |
+| Linux, Intel/AMD | `s3bucketferry-0.3.9-linux-amd64.tar.gz` |
+| Linux, ARM | `s3bucketferry-0.3.9-linux-arm64.tar.gz` |
+| Windows | `s3bucketferry-0.3.9-windows-amd64.zip` |
+| macOS, Intel | `s3bucketferry-0.3.9-macos-amd64.tar.gz` |
+| macOS, Apple silicon | `s3bucketferry-0.3.9-macos-arm64.tar.gz` |
 
 Every release also has `SHA256SUMS.txt`, which lets you confirm the download
 is complete and unaltered.
@@ -132,7 +132,7 @@ below and section 13.9. You never need Git.
 ### Linux
 
 ```bash
-VER=0.3.8
+VER=0.3.9
 BASE=https://github.com/debkhadanga2023-lgtm/S3BucketFerry/releases/download/v$VER
 cd /tmp
 curl -fLO $BASE/s3bucketferry-$VER-linux-amd64.tar.gz
@@ -154,7 +154,7 @@ which certificate to use.
 
 ### Windows
 
-1. Download `s3bucketferry-0.3.8-windows-amd64.zip`.
+1. Download `s3bucketferry-0.3.9-windows-amd64.zip`.
 2. Right-click the file, select **Extract All**, and extract to a folder such as
    `C:\S3BucketFerry`.
 3. Open **PowerShell** in that folder and run `.\s3bucketferry.exe version`.
@@ -176,8 +176,8 @@ installation.
 and download two files from the release you want:
 
 - the package for the S3BucketFerry machine, for example
-  `s3bucketferry-0.3.8-linux-amd64.tar.gz` or
-  `s3bucketferry-0.3.8-windows-amd64.zip`;
+  `s3bucketferry-0.3.9-linux-amd64.tar.gz` or
+  `s3bucketferry-0.3.9-windows-amd64.zip`;
 - `SHA256SUMS.txt`.
 
 Copy both to the S3BucketFerry machine, for example on a USB drive, over a file
@@ -188,9 +188,9 @@ the same folder.
 
 ```bash
 cd /tmp                                            # the folder you copied the two files to
-sha256sum -c --ignore-missing SHA256SUMS.txt       # must print: s3bucketferry-0.3.8-linux-amd64.tar.gz: OK
+sha256sum -c --ignore-missing SHA256SUMS.txt       # must print: s3bucketferry-0.3.9-linux-amd64.tar.gz: OK
 sudo mkdir -p /opt/s3bucketferry
-sudo tar -xzf s3bucketferry-0.3.8-linux-amd64.tar.gz -C /opt/s3bucketferry --strip-components=1
+sudo tar -xzf s3bucketferry-0.3.9-linux-amd64.tar.gz -C /opt/s3bucketferry --strip-components=1
 sudo ln -sf /opt/s3bucketferry/s3bucketferry /usr/local/bin/s3bucketferry
 s3bucketferry version
 s3bucketferry doctor
@@ -206,7 +206,7 @@ In PowerShell, in the folder you copied the two files to:
 
 ```powershell
 cd D:\                                                     # the folder with the two files
-(Get-FileHash .\s3bucketferry-0.3.8-windows-amd64.zip -Algorithm SHA256).Hash.ToLower()
+(Get-FileHash .\s3bucketferry-0.3.9-windows-amd64.zip -Algorithm SHA256).Hash.ToLower()
 Select-String -Path .\SHA256SUMS.txt -Pattern "windows-amd64.zip"
 ```
 
@@ -214,9 +214,9 @@ The two long values must be identical. (`certutil -hashfile <file> SHA256`
 shows the same value.) Then unpack the program into `C:\S3BucketFerry`:
 
 ```powershell
-Expand-Archive .\s3bucketferry-0.3.8-windows-amd64.zip -DestinationPath $env:TEMP\s3bf
+Expand-Archive .\s3bucketferry-0.3.9-windows-amd64.zip -DestinationPath $env:TEMP\s3bf
 New-Item -ItemType Directory -Force C:\S3BucketFerry | Out-Null
-Copy-Item $env:TEMP\s3bf\s3bucketferry-0.3.8-windows-amd64\* C:\S3BucketFerry -Recurse -Force
+Copy-Item $env:TEMP\s3bf\s3bucketferry-0.3.9-windows-amd64\* C:\S3BucketFerry -Recurse -Force
 cd C:\S3BucketFerry
 .\s3bucketferry.exe version
 .\s3bucketferry.exe doctor
@@ -314,6 +314,14 @@ recognise. This guide uses `source-s3` and `target-s3`.
 To copy between two buckets on the **same** storage system, one profile is
 enough: use it as both source and target.
 
+> **Important: the key fields take a variable NAME, never the key itself.**
+> Type `SOURCE_ACCESS_KEY`, not `AKIA...` or the real secret. The real keys go
+> only in the keys file (section 4). If a key is typed into a profile, it is
+> saved in plain text in `profiles.json`. Since 0.3.9, S3BucketFerry refuses
+> a value that looks like a key. If an older profile already holds one, edit
+> it (see "Edit or fix a profile" below) and then change those keys on the
+> storage system.
+
 ### What to enter
 
 | Field (web) | Option (command line) | What to enter |
@@ -322,21 +330,23 @@ enough: use it as both source and target.
 | Endpoint URL | `--endpoint` | The S3 address, for example `https://s3.storage.example.com`. |
 | Provider | `--provider` | The type of storage. **Other S3-compatible** (`Other`) works for most systems; it's the default. Choose **Amazon S3** (`AWS`), **IBM COS / Cleversafe** (`IBMCOS`), **Ceph** or **MinIO** when that is what you have. The command line accepts any provider name that rclone supports; see [rclone's S3 page](https://rclone.org/s3/). |
 | Region | `--region` | The region your administrators gave you. Leave it empty if none. |
-| Access key variable | `--access-key-env` | The **name** of the variable, for example `SOURCE_ACCESS_KEY`. Not the key itself. |
-| Secret key variable | `--secret-key-env` | The **name** of the variable, for example `SOURCE_SECRET_KEY`. |
+| Access key variable | `--access-key-env` | The **name** of the variable, for example `SOURCE_ACCESS_KEY`. **Not the key itself.** |
+| Secret key variable | `--secret-key-env` | The **name** of the variable, for example `SOURCE_SECRET_KEY`. **Not the secret key itself.** Don't start the name with `RCLONE_`. |
 | CA certificate file | `--ca-cert` | Only for HTTPS endpoints whose certificate comes from a private certificate authority: the path of its PEM file on this machine. |
 | Do not verify the TLS certificate | `--insecure-tls` | For tests only. It turns off a security check. |
 | rclone remote | `--rclone-remote` | Advanced: use a remote that already exists in your rclone configuration instead of the fields above. |
 
-A common mistake is typing the key itself into the key variable field. The
-error then shows your key as a variable name ("environment variables
-AKIA... must both be set"). Remove the profile and add it again with the
-variable names.
+The most common mistake is typing the key itself into a key variable field.
+S3BucketFerry now refuses such a value with "a key variable field holds what
+looks like a real key". To fix a profile that already holds a key, see "Edit
+or fix a profile" below.
 
 ### Add the profiles in the web interface
 
 Open **Connection profiles** (full access needed), fill in **Add or update a
-profile**, and select **Save profile**. Then do the same for the target.
+profile**, and select **Save profile**. Then do the same for the target. The
+yellow box at the top of the form is a reminder that the key fields take
+variable names.
 
 ![The Add or update a profile form, with numbered fields](images/04-profile-add.png)
 
@@ -344,8 +354,8 @@ profile**, and select **Save profile**. Then do the same for the target.
 2. Endpoint URL.
 3. Provider: keep **Other S3-compatible** unless your storage is listed.
 4. Region, if your storage needs one.
-5. Name of the variable holding the access key.
-6. Name of the variable holding the secret key.
+5. Name of the variable holding the access key (not the key).
+6. Name of the variable holding the secret key (not the key).
 7. CA certificate file, only for a private certificate authority.
 8. An existing rclone remote, as an alternative to fields 2 to 7.
 9. **Save profile**.
@@ -358,6 +368,36 @@ Select **Test** next to a profile to check it. The result opens as a task under
 **Activity**:
 
 ![A successful profile test](images/05-profile-test.png)
+
+After saving, S3BucketFerry tells you if a variable you named isn't set for
+the web interface yet. Add it to the keys file and restart the web interface
+before you select **Test**.
+
+### Edit or fix a profile
+
+Users with full access can change a profile in the web interface. Select
+**Edit** next to the profile. The form opens filled in with the saved
+settings. Change what you need and select **Save profile**, or **Cancel**.
+
+![Editing a profile](images/37-profile-edit.png)
+
+- The profile name can't be changed here. To rename, add the profile under the
+  new name and remove the old one.
+- If a key variable field held what looks like a real key, the profiles list
+  shows **(hidden)** with **Edit this profile: a field holds a key, not a
+  variable name**. The key is never shown on screen: the edit form leaves that
+  field empty. Type the variable name (for example `SOURCE_ACCESS_KEY`), put
+  the real key in the keys file (section 4), save, and restart the web
+  interface.
+
+![A profile that holds a key: masked in the list, with a warning](images/38-profile-key-warning.png)
+
+A key that was saved in a profile was stored in plain text in `profiles.json`
+and may have been seen on screen. After fixing the profile, change (rotate)
+that key pair on the storage system and put the new values in the keys file.
+
+On the command line, change a profile by running `profile add` again with the
+same `--name` and all the settings: the new settings replace the old ones.
 
 ### Add the profiles on the command line
 
@@ -1298,7 +1338,7 @@ works.
 |---|---|
 | read-only | View the dashboard, activity, jobs, reports, certificates, connection profiles and help |
 | read-write | Also start and stop tasks, and test profiles |
-| full | Also manage profiles, notifications and users |
+| full | Also add, edit and remove profiles, and manage notifications and users |
 
 - **Add a user:** a name, an access level, and an initial password (leave it
   empty to generate one; it is shown once). The user must choose a new password
@@ -1558,7 +1598,7 @@ upgrade.
 
 ```bash
 s3bucketferry version                                           # what you have now
-sudo s3bucketferry upgrade --package /tmp/s3bucketferry-0.3.8-linux-amd64.tar.gz
+sudo s3bucketferry upgrade --package /tmp/s3bucketferry-0.3.9-linux-amd64.tar.gz
 ```
 
 It works exactly like the online upgrade (13.3): it checks the package against
@@ -1597,9 +1637,9 @@ the copy is complete and unaltered.
 
 ```bash
 cd /tmp
-tar -xzf s3bucketferry-0.3.8-linux-amd64.tar.gz
-sudo bash s3bucketferry-0.3.8-linux-amd64/upgrade.sh --dir /opt/s3bucketferry \
-     --package /tmp/s3bucketferry-0.3.8-linux-amd64.tar.gz
+tar -xzf s3bucketferry-0.3.9-linux-amd64.tar.gz
+sudo bash s3bucketferry-0.3.9-linux-amd64/upgrade.sh --dir /opt/s3bucketferry \
+     --package /tmp/s3bucketferry-0.3.9-linux-amd64.tar.gz
 ```
 
 From then on use `sudo s3bucketferry upgrade --package ...`.
@@ -1616,7 +1656,7 @@ instead of downloaded. In PowerShell:
 
 ```powershell
 cd D:\                                                     # the folder with the copied files
-(Get-FileHash .\s3bucketferry-0.3.8-windows-amd64.zip -Algorithm SHA256).Hash.ToLower()
+(Get-FileHash .\s3bucketferry-0.3.9-windows-amd64.zip -Algorithm SHA256).Hash.ToLower()
 Select-String -Path .\SHA256SUMS.txt -Pattern "windows-amd64.zip"   # must show the same value
 ```
 
@@ -1625,8 +1665,8 @@ Stop the web interface (Ctrl+C in its window), then:
 ```powershell
 Remove-Item C:\S3BucketFerry.previous -Recurse -Force -ErrorAction SilentlyContinue
 Copy-Item C:\S3BucketFerry C:\S3BucketFerry.previous -Recurse           # your rollback copy
-Expand-Archive .\s3bucketferry-0.3.8-windows-amd64.zip -DestinationPath $env:TEMP\s3bf -Force
-Copy-Item $env:TEMP\s3bf\s3bucketferry-0.3.8-windows-amd64\* C:\S3BucketFerry -Recurse -Force
+Expand-Archive .\s3bucketferry-0.3.9-windows-amd64.zip -DestinationPath $env:TEMP\s3bf -Force
+Copy-Item $env:TEMP\s3bf\s3bucketferry-0.3.9-windows-amd64\* C:\S3BucketFerry -Recurse -Force
 C:\S3BucketFerry\s3bucketferry.exe version
 ```
 
@@ -1726,7 +1766,10 @@ versioning, lifecycle rules, bucket policies and Object Lock defaults.
 
 | Problem | Likely cause | What to do |
 |---|---|---|
-| `environment variables X and Y must both be set` | The key variables aren't loaded in this session, or the profile holds the keys instead of variable names | Load the keys (section 4). If X looks like a key, remove the profile and add it again with variable names. |
+| `environment variables X and Y must both be set` | The key variables aren't loaded in this session or for the web interface | Load the keys (section 4); after changing the keys file, restart the web interface. |
+| `a key variable field holds what looks like a real key` (when saving or testing a profile) | The access key or secret key itself was typed into a key variable field | Type the variable **name**, for example `SOURCE_ACCESS_KEY`, and put the key in the keys file (section 4). For an existing profile, select **Edit** on the profiles page (section 5, "Edit or fix a profile"). |
+| The profiles page shows **(hidden)** and **Edit this profile: a field holds a key** | The profile was saved with a key instead of a variable name, usually by a version before 0.3.9 | Select **Edit**, type the variable names, save, and restart the web interface. Then rotate that key pair on the storage system: it was stored in plain text. |
+| `don't start a key variable name with RCLONE_` | rclone reads `RCLONE_...` variables as its own settings | Rename the variable in the keys file, for example `SOURCE_ACCESS_KEY`, and use that name in the profile. |
 | `InvalidAccessKeyId` or `SignatureDoesNotMatch` | Wrong key, or a space or quote pasted with it | Check the values in your keys file; restart the web interface after changes. |
 | Error mentioning the region, or `AuthorizationHeaderMalformed` | The storage expects a specific region | Set the profile's region to the one your administrators gave you. |
 | `AccessDenied` | The key lacks a permission | See the permissions in section 2. For bucket creation, create the target bucket first and tick **Target bucket already exists**. |

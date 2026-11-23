@@ -35,7 +35,7 @@ offline). Nothing else needs installing.
 ## Install on Linux
 
 ```bash
-VER=<version>        # for example 0.3.8
+VER=<version>        # for example 0.3.9
 BASE=https://github.com/debkhadanga2023-lgtm/S3BucketFerry/releases/download/v$VER
 cd /tmp
 curl -fLO $BASE/s3bucketferry-$VER-linux-amd64.tar.gz

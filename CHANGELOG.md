@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.3.9 - 2026-11-20
+
+- **Edit a connection profile in the web interface.** Users with full access
+  have an **Edit** button next to each profile; the form opens filled in with
+  the saved settings, with **Cancel**. Previously a profile had to be added
+  again from scratch.
+- **Keys typed into a key variable field are refused.** The access key and
+  secret key fields take the *name* of an environment variable. A value that
+  looks like a real key (for example `AKIA...`, a long run of letters and
+  digits, or a secret containing `/ + =`) is refused, in the web interface and
+  on the command line, without showing the value back. Names starting with
+  `RCLONE_` are refused too.
+- **Profiles that already hold a key are masked.** The profiles page and
+  `profile list` show **(hidden)** instead of the value, with a warning to edit
+  the profile; the edit form never sends the key to the browser; profile test
+  errors don't print it.
+- After saving a profile, the web interface says when a named variable isn't
+  set for it yet.
+- The profile form's key fields are labelled "Name of the variable ... (not
+  the key)", with a reminder box at the top of the form.
+- User guide: highlighted warning in section 5, new "Edit or fix a profile"
+  subsection with screenshots, three new troubleshooting rows; updated
+  screenshots of the profiles page and form. Help page updated to match.
+- Tests: key detection, refusal without echo, masking of stored keys, editing.
+
 ## 0.3.8 - 2026-11-19
 
 - **Resume in the web interface.** The page of a stopped, failed or partly
