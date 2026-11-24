@@ -1,6 +1,6 @@
 # S3BucketFerry User Guide
 
-Version 0.4.0
+Version 0.4.1
 
 S3BucketFerry ("S3 Bucket Ferry") copies buckets from one S3-compatible storage
 system to another, checks every object, and issues a migration certificate at
@@ -114,11 +114,11 @@ browser without internet access, and `USER_GUIDE.md`. Packages are on the
 
 | System | Package |
 |---|---|
-| Linux, Intel/AMD | `s3bucketferry-0.4.0-linux-amd64.tar.gz` |
-| Linux, ARM | `s3bucketferry-0.4.0-linux-arm64.tar.gz` |
-| Windows | `s3bucketferry-0.4.0-windows-amd64.zip` |
-| macOS, Intel | `s3bucketferry-0.4.0-macos-amd64.tar.gz` |
-| macOS, Apple silicon | `s3bucketferry-0.4.0-macos-arm64.tar.gz` |
+| Linux, Intel/AMD | `s3bucketferry-0.4.1-linux-amd64.tar.gz` |
+| Linux, ARM | `s3bucketferry-0.4.1-linux-arm64.tar.gz` |
+| Windows | `s3bucketferry-0.4.1-windows-amd64.zip` |
+| macOS, Intel | `s3bucketferry-0.4.1-macos-amd64.tar.gz` |
+| macOS, Apple silicon | `s3bucketferry-0.4.1-macos-arm64.tar.gz` |
 
 Every release also has `SHA256SUMS.txt`, which lets you confirm the download
 is complete and unaltered.
@@ -132,7 +132,7 @@ below and section 13.9. You never need Git.
 ### Linux
 
 ```bash
-VER=0.4.0
+VER=0.4.1
 BASE=https://github.com/debkhadanga2023-lgtm/S3BucketFerry/releases/download/v$VER
 cd /tmp
 curl -fLO $BASE/s3bucketferry-$VER-linux-amd64.tar.gz
@@ -154,7 +154,7 @@ which certificate to use.
 
 ### Windows
 
-1. Download `s3bucketferry-0.4.0-windows-amd64.zip`.
+1. Download `s3bucketferry-0.4.1-windows-amd64.zip`.
 2. Right-click the file, select **Extract All**, and extract to a folder such as
    `C:\S3BucketFerry`.
 3. Open **PowerShell** in that folder and run `.\s3bucketferry.exe version`.
@@ -176,8 +176,8 @@ installation.
 and download two files from the release you want:
 
 - the package for the S3BucketFerry machine, for example
-  `s3bucketferry-0.4.0-linux-amd64.tar.gz` or
-  `s3bucketferry-0.4.0-windows-amd64.zip`;
+  `s3bucketferry-0.4.1-linux-amd64.tar.gz` or
+  `s3bucketferry-0.4.1-windows-amd64.zip`;
 - `SHA256SUMS.txt`.
 
 Copy both to the S3BucketFerry machine, for example on a USB drive, over a file
@@ -188,9 +188,9 @@ the same folder.
 
 ```bash
 cd /tmp                                            # the folder you copied the two files to
-sha256sum -c --ignore-missing SHA256SUMS.txt       # must print: s3bucketferry-0.4.0-linux-amd64.tar.gz: OK
+sha256sum -c --ignore-missing SHA256SUMS.txt       # must print: s3bucketferry-0.4.1-linux-amd64.tar.gz: OK
 sudo mkdir -p /opt/s3bucketferry
-sudo tar -xzf s3bucketferry-0.4.0-linux-amd64.tar.gz -C /opt/s3bucketferry --strip-components=1
+sudo tar -xzf s3bucketferry-0.4.1-linux-amd64.tar.gz -C /opt/s3bucketferry --strip-components=1
 sudo ln -sf /opt/s3bucketferry/s3bucketferry /usr/local/bin/s3bucketferry
 s3bucketferry version
 s3bucketferry doctor
@@ -206,7 +206,7 @@ In PowerShell, in the folder you copied the two files to:
 
 ```powershell
 cd D:\                                                     # the folder with the two files
-(Get-FileHash .\s3bucketferry-0.4.0-windows-amd64.zip -Algorithm SHA256).Hash.ToLower()
+(Get-FileHash .\s3bucketferry-0.4.1-windows-amd64.zip -Algorithm SHA256).Hash.ToLower()
 Select-String -Path .\SHA256SUMS.txt -Pattern "windows-amd64.zip"
 ```
 
@@ -214,9 +214,9 @@ The two long values must be identical. (`certutil -hashfile <file> SHA256`
 shows the same value.) Then unpack the program into `C:\S3BucketFerry`:
 
 ```powershell
-Expand-Archive .\s3bucketferry-0.4.0-windows-amd64.zip -DestinationPath $env:TEMP\s3bf
+Expand-Archive .\s3bucketferry-0.4.1-windows-amd64.zip -DestinationPath $env:TEMP\s3bf
 New-Item -ItemType Directory -Force C:\S3BucketFerry | Out-Null
-Copy-Item $env:TEMP\s3bf\s3bucketferry-0.4.0-windows-amd64\* C:\S3BucketFerry -Recurse -Force
+Copy-Item $env:TEMP\s3bf\s3bucketferry-0.4.1-windows-amd64\* C:\S3BucketFerry -Recurse -Force
 cd C:\S3BucketFerry
 .\s3bucketferry.exe version
 .\s3bucketferry.exe doctor
@@ -264,8 +264,11 @@ This guide uses four names. You can choose your own:
 | `TARGET_ACCESS_KEY` | the target access key |
 | `TARGET_SECRET_KEY` | the target secret key |
 
-Don't start a variable name with `RCLONE_`. rclone reads every `RCLONE_...`
-variable as one of its own settings.
+Don't start the name of a key variable with `RCLONE_`. rclone reads every
+`RCLONE_...` variable as one of its own settings. (The keys file can still
+hold an rclone setting on purpose, such as `RCLONE_CONFIG_PASS` for an
+encrypted rclone settings file: see section 5, "Use an existing rclone
+remote".)
 
 ### Linux and macOS
 
@@ -347,7 +350,7 @@ enough: use it as both source and target.
 | HTTPS certificate: import a file, or paste it | `--ca-cert-import FILE` | Only for HTTPS endpoints whose certificate comes from the customer's own certificate authority (CA): the CA certificate in PEM format. A copy is kept with the profile. See "HTTPS certificates of the storage systems" below. |
 | HTTPS certificate: a file already on the server | `--ca-cert FILE` | The same, but the profile refers to the file where it is instead of keeping a copy. |
 | Do not verify the certificate | `--insecure-tls` | Bypass, for tests only: turns off the certificate check for this profile's endpoint. |
-| rclone remote | `--rclone-remote` | Advanced: use a remote that already exists in your rclone configuration instead of the fields above. |
+| rclone remote | `--rclone-remote` | Advanced: use a remote that already exists in rclone's own settings file instead of the fields above. See "Use an existing rclone remote (advanced)" below. |
 
 The most common mistake is typing the key itself into a key variable field.
 S3BucketFerry now refuses such a value with "a key variable field holds what
@@ -374,7 +377,8 @@ variable names.
 8. Or paste the certificate text (`-----BEGIN CERTIFICATE-----` ...).
 9. Or refer to a certificate file that is already on the server.
 10. Do not verify the certificate: the bypass, for tests only.
-11. An existing rclone remote, as an alternative to fields 2 to 10.
+11. An existing rclone remote, as an alternative to fields 2 to 10 (see "Use
+    an existing rclone remote (advanced)" below).
 12. **Save profile**.
 
 Both profiles then appear at the top of the page:
@@ -501,6 +505,86 @@ Since 0.4.0, these settings apply to each profile's own endpoint. Before, a
 certificate given for one profile replaced the trusted CAs for both ends of a
 migration, and the bypass on one profile turned off checks for both.
 
+### Use an existing rclone remote (advanced)
+
+rclone keeps its own settings file, normally `~/.config/rclone/rclone.conf`,
+in which each named entry is a **remote**: an endpoint, a provider type, keys
+and any other rclone options. Instead of filling in the endpoint and key
+fields, a profile can simply name such a remote. S3BucketFerry then passes
+the name to rclone, and rclone reads everything else from its settings file.
+Scans, migrations, verification, cutover and certificates work as usual.
+
+Use it when:
+
+- a working rclone remote for that storage already exists;
+- you need an rclone option the profile form doesn't offer, such as
+  `force_path_style`, `v2_auth`, server-side encryption or `upload_cutoff`
+  (see [rclone's S3 page](https://rclone.org/s3/));
+- the storage isn't S3: any rclone backend works, for example a local folder.
+
+For ordinary S3 storage, the normal profile fields are simpler and keep the
+keys out of files you have to protect yourself.
+
+**1. Create the remote as the user that runs S3BucketFerry.** rclone looks in
+the settings file of the user running it: for the web interface, that is the
+service user (`ferry` in this guide), not you or root. With the rclone
+bundled in the package, either follow the questions:
+
+```bash
+sudo -u ferry /opt/s3bucketferry/rclone config
+```
+
+or create it in one command:
+
+```bash
+sudo -u ferry /opt/s3bucketferry/rclone config create cleversafe s3 \
+  provider IBMCOS endpoint https://s3.source.example.com \
+  access_key_id <access key> secret_access_key <secret key> \
+  ca_cert /etc/pki/tls/certs/storage-ca.pem
+```
+
+`ca_cert` is only needed for a certificate from the customer's own CA; give
+the full path of a PEM file the service user can read.
+
+**2. Point a profile at it.** In the profile form, open **Use an rclone remote
+instead**, type the remote name (`cleversafe`), and leave the endpoint and
+key variable fields empty. On the command line:
+
+```bash
+s3bucketferry profile add --name source-s3 --rclone-remote cleversafe
+```
+
+**3. Test it** with **Test**, or `s3bucketferry profile test --name source-s3`.
+The profiles list shows the profile as `(rclone)`, with **as set in the rclone
+remote** in the **TLS** column.
+
+**Keep the keys safe.** In a remote, the keys are stored in `rclone.conf`, in
+plain text unless you encrypt the file. This is rclone's file, not
+S3BucketFerry's, so protect it yourself:
+
+```bash
+sudo -u ferry chmod 600 /home/ferry/.config/rclone/rclone.conf
+sudo -u ferry /opt/s3bucketferry/rclone config encryption set   # asks for a password
+```
+
+After encrypting it, rclone needs the password every time it runs. Put it in
+the keys file (section 4), which the web interface reads for every task:
+
+```text
+RCLONE_CONFIG_PASS=<the password you chose>
+```
+
+On the command line, load the keys file in your session as usual. To use a
+settings file in another place, add `RCLONE_CONFIG=<full path>` to the keys
+file the same way.
+
+**What doesn't apply to an rclone remote profile:** the key variable fields,
+the keys-file reload for the remote's own keys (they live in `rclone.conf`;
+an edit there is used from the next task), and certificate import (set
+`ca_cert` in the remote instead). "Do not verify the certificate" still works
+for the profile, but setting `no_check_certificate = true` in the remote
+does the same.
+
 ### Add the profiles on the command line
 
 ```bash
@@ -548,18 +632,27 @@ List and test the profiles:
 ```text
 $ s3bucketferry profile list
 NAME       PROVIDER  ENDPOINT / REMOTE             KEY VARIABLES                         TLS
-source-s3  Other     http://source-s3.example.com  SOURCE_ACCESS_KEY, SOURCE_SECRET_KEY  system CAs
-target-s3  Other     http://target-s3.example.com  TARGET_ACCESS_KEY, TARGET_SECRET_KEY  system CAs
+source-s3  Other     http://source-s3.example.com  SOURCE_ACCESS_KEY, SOURCE_SECRET_KEY  none (plain HTTP)
+target-s3  Other     http://target-s3.example.com  TARGET_ACCESS_KEY, TARGET_SECRET_KEY  none (plain HTTP)
 
 $ s3bucketferry profile test --name source-s3
+TLS: none (plain HTTP)
 OK: connected to "source-s3", 2 bucket(s) visible
 
 $ s3bucketferry profile test --name target-s3 --bucket photos
+TLS: none (plain HTTP)
 OK: bucket "photos" is reachable with profile "target-s3" (4 top-level prefix(es))
+
+$ s3bucketferry profile buckets --name source-s3
+archive
+photos
 ```
 
 `--bucket` tests access to one bucket instead of listing them all, which is
-useful when the key may only see its own bucket. `profile remove --name NAME`
+useful when the key may only see its own bucket. `profile buckets` lists the
+buckets the profile's key can see, one per line (`--json` for scripts); the
+web interface uses it for the bucket lists in its forms. A key that may not
+list buckets shows none, though it can still reach a bucket you name. `profile remove --name NAME`
 deletes a profile.
 
 ### Locations
@@ -1007,14 +1100,27 @@ a build from source), the page links to the guide on GitHub instead.
 
 ### 8.1 Scan the source
 
-**Migration > Scan**. Choose the source profile, type the bucket, and select
-**Start scan**.
+**Migration > Scan**. Choose the source profile. The page then lists the
+buckets that profile can see: choose one, or type the bucket name in the box
+next to it (add `/prefix` to scan only part of a bucket). Select **Start
+scan**.
 
-![The Scan page](images/06-scan-form.png)
+![The Scan page, with the bucket list of the chosen profile](images/06-scan-form.png)
 
-The scan counts the objects and adds up their size. Nothing is copied.
+The bucket list appears in every task form (Scan, Migrate, Verify, Cutover,
+Certificate, Cleanup), for the source and the target. If it can't be shown,
+the page says why under the profile, for example `AccessDenied` when the key
+may not list buckets (common for keys limited to one bucket), or a
+certificate or region problem with a hint. You can always type the bucket
+name instead.
 
-![Scan result: 643 objects, 297 MiB](images/07-scan-result.png)
+The scan counts the objects and adds up their size. Nothing is copied. When
+it has finished, its task page (and its job page) has **Migrate this
+bucket**. It opens **Migrate** with the scanned profile and bucket
+already filled in as the source; choose the target and continue with the
+dry run below.
+
+![A finished scan: object count and size, and Migrate this bucket](images/40-scan-migrate-button.png)
 
 ### 8.2 Dry run
 
@@ -1022,8 +1128,10 @@ The scan counts the objects and adds up their size. Nothing is copied.
 
 ![The Migrate form, with numbered fields](images/08-migrate-form.png)
 
-1. Source: profile and bucket (optionally `bucket/prefix`).
-2. Target: profile and bucket. The target bucket can have a different name.
+1. Source: profile, then the bucket from the list or typed (optionally
+   `bucket/prefix`).
+2. Target: profile and bucket, the same way. The target bucket can have a
+   different name; to have it created, type a new name.
 3. **Dry run**: ticked by default. Nothing is changed while it is ticked.
 4. **Preserve object metadata**: keeps each object's content type and custom
    metadata. Recommended.
@@ -1763,7 +1871,7 @@ upgrade.
 
 ```bash
 s3bucketferry version                                           # what you have now
-sudo s3bucketferry upgrade --package /tmp/s3bucketferry-0.4.0-linux-amd64.tar.gz
+sudo s3bucketferry upgrade --package /tmp/s3bucketferry-0.4.1-linux-amd64.tar.gz
 ```
 
 It works exactly like the online upgrade (13.3): it checks the package against
@@ -1802,9 +1910,9 @@ the copy is complete and unaltered.
 
 ```bash
 cd /tmp
-tar -xzf s3bucketferry-0.4.0-linux-amd64.tar.gz
-sudo bash s3bucketferry-0.4.0-linux-amd64/upgrade.sh --dir /opt/s3bucketferry \
-     --package /tmp/s3bucketferry-0.4.0-linux-amd64.tar.gz
+tar -xzf s3bucketferry-0.4.1-linux-amd64.tar.gz
+sudo bash s3bucketferry-0.4.1-linux-amd64/upgrade.sh --dir /opt/s3bucketferry \
+     --package /tmp/s3bucketferry-0.4.1-linux-amd64.tar.gz
 ```
 
 From then on use `sudo s3bucketferry upgrade --package ...`.
@@ -1821,7 +1929,7 @@ instead of downloaded. In PowerShell:
 
 ```powershell
 cd D:\                                                     # the folder with the copied files
-(Get-FileHash .\s3bucketferry-0.4.0-windows-amd64.zip -Algorithm SHA256).Hash.ToLower()
+(Get-FileHash .\s3bucketferry-0.4.1-windows-amd64.zip -Algorithm SHA256).Hash.ToLower()
 Select-String -Path .\SHA256SUMS.txt -Pattern "windows-amd64.zip"   # must show the same value
 ```
 
@@ -1830,8 +1938,8 @@ Stop the web interface (Ctrl+C in its window), then:
 ```powershell
 Remove-Item C:\S3BucketFerry.previous -Recurse -Force -ErrorAction SilentlyContinue
 Copy-Item C:\S3BucketFerry C:\S3BucketFerry.previous -Recurse           # your rollback copy
-Expand-Archive .\s3bucketferry-0.4.0-windows-amd64.zip -DestinationPath $env:TEMP\s3bf -Force
-Copy-Item $env:TEMP\s3bf\s3bucketferry-0.4.0-windows-amd64\* C:\S3BucketFerry -Recurse -Force
+Expand-Archive .\s3bucketferry-0.4.1-windows-amd64.zip -DestinationPath $env:TEMP\s3bf -Force
+Copy-Item $env:TEMP\s3bf\s3bucketferry-0.4.1-windows-amd64\* C:\S3BucketFerry -Recurse -Force
 C:\S3BucketFerry\s3bucketferry.exe version
 ```
 
@@ -1943,6 +2051,10 @@ versioning, lifecycle rules, bucket policies and Object Lock defaults.
 | `InvalidAccessKeyId` or `SignatureDoesNotMatch` | Wrong key, or a space or quote pasted with it | Check the values in your keys file. The next task uses the new values; check its first line says the variable "changed". |
 | Error mentioning the region, or `AuthorizationHeaderMalformed` | The storage expects a specific region | Set the profile's region to the one your administrators gave you. |
 | `AccessDenied` | The key lacks a permission | See the permissions in section 2. For bucket creation, create the target bucket first and tick **Target bucket already exists**. |
+| `Could not list the buckets: AccessDenied` under a profile in a task form | The key may not list buckets (normal for a key limited to one bucket) | Type the bucket name; the task can still use the bucket. |
+| `Could not list the buckets` with another message | The profile can't connect: the message and its hint name the cause (keys, certificate, region) | Fix the profile, then choose it again; or select **Test** on the profiles page. |
+| `didn't find section in config file ("<name>")` | The profile names an rclone remote that doesn't exist in the settings file of the user running the task | Check the name (`sudo -u ferry /opt/s3bucketferry/rclone listremotes`). For the web interface, create the remote as the service user (section 5, "Use an existing rclone remote"). |
+| `Enter configuration password` ... `Failed to read line: EOF` | rclone's settings file is encrypted and no password was given | Add `RCLONE_CONFIG_PASS=<password>` to the keys file (section 4). |
 | `x509: certificate signed by unknown authority` | The storage's HTTPS certificate comes from the customer's own CA | Import the CA certificate into the profile: **Edit** > **HTTPS certificate of this storage**, or `--ca-cert-import FILE` (section 5, "HTTPS certificates of the storage systems"). The bypass is for tests only. |
 | `x509: certificate has expired or is not yet valid` | The storage's certificate expired, or this machine's clock is wrong | Ask the storage administrators to renew it; check the clock (`timedatectl`). |
 | `x509: certificate is valid for <name>, not <other>` | The endpoint URL uses a name or IP address the certificate doesn't cover | Use the host name the certificate was issued for in the endpoint URL. |

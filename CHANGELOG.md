@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.4.1 - 2026-11-24
+
+- **Bucket lists in the task forms.** Choosing a profile in Scan, Migrate,
+  Verify, Cutover, Certificate or Cleanup lists the buckets that profile can
+  see, for the source and the target; choosing one fills the bucket box, which
+  can still be typed in (for `bucket/prefix`, or a bucket the key may not
+  list). The list is read with the current keys file. When it can't be shown,
+  the reason appears under the profile in one line with a hint (key not
+  allowed to list buckets, wrong keys, untrusted certificate, wrong region
+  with the expected one). Without JavaScript the forms work as before.
+- **`profile buckets --name NAME [--json]`**: lists a profile's buckets on the
+  command line.
+- **Scan, then migrate.** A finished scan's task page and job page have
+  **Migrate this bucket**, which opens Migrate with the scanned profile and
+  bucket as the source. Task forms also accept `?src=profile:bucket` and
+  `?dst=` in their address.
+- `profile list` shows "none (plain HTTP)" for `http://` endpoints, like the
+  web interface.
+- Tests: the bucket list endpoint, error summaries (including the region
+  hint), form prefill and the Migrate buttons; the integration test lists the
+  buckets of an HTTPS profile and checks the certificate hint. A UI test no
+  longer races with tasks still running at cleanup.
+- User guide: section 8.1 (bucket list, Migrate this bucket, with new
+  screenshots), 8.2 steps, `profile buckets` and corrected sample output in
+  section 5, two troubleshooting rows. Help page updated to match.
+
 ## 0.4.0 - 2026-11-23
 
 **Upgrading:** from 0.3.10, `sudo s3bucketferry upgrade` is enough. From 0.3.9
@@ -33,9 +59,15 @@ guide, section 13, "Upgrading to 0.4.0".
   adds a limitation line.
 - `profile test` prints how the certificate is checked, and explains common
   TLS errors (unknown authority, expired, wrong name, HTTP endpoint).
+- Profiles that use an existing rclone remote now show "as set in the rclone
+  remote" in the TLS column (web and `profile list`), instead of "system CAs".
 - The web interface accepts file uploads (forms are limited to 4 MB).
 - The profile form's key reminder no longer says to restart the web interface
   (not needed since 0.3.10).
+- User guide: new "Use an existing rclone remote (advanced)" in section 5
+  (what it is, creating the remote as the service user, protecting and
+  encrypting rclone.conf with `RCLONE_CONFIG_PASS` in the keys file, what
+  doesn't apply) and two troubleshooting rows; Help page to match.
 - User guide: new "HTTPS certificates of the storage systems" in section 5,
   updated form screenshots and steps, command-line examples, "Upgrading to
   0.4.0", `certs/` in section 14, six troubleshooting rows, glossary. Help page
