@@ -1,6 +1,6 @@
 # S3BucketFerry User Guide
 
-Version 0.4.1
+Version 0.4.2
 
 S3BucketFerry ("S3 Bucket Ferry") copies buckets from one S3-compatible storage
 system to another, checks every object, and issues a migration certificate at
@@ -37,7 +37,7 @@ The screenshots and sample output in this guide come from real migrations
 between two test S3 servers, `source-s3.example.com` and `target-s3.example.com`,
 mostly made with version 0.3.2. The screens are the same in later versions,
 except for the **User guide** link added in 0.3.3. Since 0.3.4 the web interface
-uses HTTPS (section 6), and since 0.3.5 `service setup` sets up its service. The profiles page gained **Edit** and a reminder about key variable names in 0.3.9. Your names, numbers and dates will differ.
+uses HTTPS (section 6), and since 0.3.5 `service setup` sets up its service. The profiles page gained **Edit** and a reminder about key variable names in 0.3.9, the task forms their bucket lists in 0.4.1, and the numbered step tabs, **Next step** and **Running now** came in 0.4.2: older screenshots show the task tabs without numbers. Your names, numbers and dates will differ.
 
 This guide is also built into the web interface: **Support > User guide**.
 
@@ -114,11 +114,11 @@ browser without internet access, and `USER_GUIDE.md`. Packages are on the
 
 | System | Package |
 |---|---|
-| Linux, Intel/AMD | `s3bucketferry-0.4.1-linux-amd64.tar.gz` |
-| Linux, ARM | `s3bucketferry-0.4.1-linux-arm64.tar.gz` |
-| Windows | `s3bucketferry-0.4.1-windows-amd64.zip` |
-| macOS, Intel | `s3bucketferry-0.4.1-macos-amd64.tar.gz` |
-| macOS, Apple silicon | `s3bucketferry-0.4.1-macos-arm64.tar.gz` |
+| Linux, Intel/AMD | `s3bucketferry-0.4.2-linux-amd64.tar.gz` |
+| Linux, ARM | `s3bucketferry-0.4.2-linux-arm64.tar.gz` |
+| Windows | `s3bucketferry-0.4.2-windows-amd64.zip` |
+| macOS, Intel | `s3bucketferry-0.4.2-macos-amd64.tar.gz` |
+| macOS, Apple silicon | `s3bucketferry-0.4.2-macos-arm64.tar.gz` |
 
 Every release also has `SHA256SUMS.txt`, which lets you confirm the download
 is complete and unaltered.
@@ -132,7 +132,7 @@ below and section 13.9. You never need Git.
 ### Linux
 
 ```bash
-VER=0.4.1
+VER=0.4.2
 BASE=https://github.com/debkhadanga2023-lgtm/S3BucketFerry/releases/download/v$VER
 cd /tmp
 curl -fLO $BASE/s3bucketferry-$VER-linux-amd64.tar.gz
@@ -154,7 +154,7 @@ which certificate to use.
 
 ### Windows
 
-1. Download `s3bucketferry-0.4.1-windows-amd64.zip`.
+1. Download `s3bucketferry-0.4.2-windows-amd64.zip`.
 2. Right-click the file, select **Extract All**, and extract to a folder such as
    `C:\S3BucketFerry`.
 3. Open **PowerShell** in that folder and run `.\s3bucketferry.exe version`.
@@ -176,8 +176,8 @@ installation.
 and download two files from the release you want:
 
 - the package for the S3BucketFerry machine, for example
-  `s3bucketferry-0.4.1-linux-amd64.tar.gz` or
-  `s3bucketferry-0.4.1-windows-amd64.zip`;
+  `s3bucketferry-0.4.2-linux-amd64.tar.gz` or
+  `s3bucketferry-0.4.2-windows-amd64.zip`;
 - `SHA256SUMS.txt`.
 
 Copy both to the S3BucketFerry machine, for example on a USB drive, over a file
@@ -188,9 +188,9 @@ the same folder.
 
 ```bash
 cd /tmp                                            # the folder you copied the two files to
-sha256sum -c --ignore-missing SHA256SUMS.txt       # must print: s3bucketferry-0.4.1-linux-amd64.tar.gz: OK
+sha256sum -c --ignore-missing SHA256SUMS.txt       # must print: s3bucketferry-0.4.2-linux-amd64.tar.gz: OK
 sudo mkdir -p /opt/s3bucketferry
-sudo tar -xzf s3bucketferry-0.4.1-linux-amd64.tar.gz -C /opt/s3bucketferry --strip-components=1
+sudo tar -xzf s3bucketferry-0.4.2-linux-amd64.tar.gz -C /opt/s3bucketferry --strip-components=1
 sudo ln -sf /opt/s3bucketferry/s3bucketferry /usr/local/bin/s3bucketferry
 s3bucketferry version
 s3bucketferry doctor
@@ -206,7 +206,7 @@ In PowerShell, in the folder you copied the two files to:
 
 ```powershell
 cd D:\                                                     # the folder with the two files
-(Get-FileHash .\s3bucketferry-0.4.1-windows-amd64.zip -Algorithm SHA256).Hash.ToLower()
+(Get-FileHash .\s3bucketferry-0.4.2-windows-amd64.zip -Algorithm SHA256).Hash.ToLower()
 Select-String -Path .\SHA256SUMS.txt -Pattern "windows-amd64.zip"
 ```
 
@@ -214,9 +214,9 @@ The two long values must be identical. (`certutil -hashfile <file> SHA256`
 shows the same value.) Then unpack the program into `C:\S3BucketFerry`:
 
 ```powershell
-Expand-Archive .\s3bucketferry-0.4.1-windows-amd64.zip -DestinationPath $env:TEMP\s3bf
+Expand-Archive .\s3bucketferry-0.4.2-windows-amd64.zip -DestinationPath $env:TEMP\s3bf
 New-Item -ItemType Directory -Force C:\S3BucketFerry | Out-Null
-Copy-Item $env:TEMP\s3bf\s3bucketferry-0.4.1-windows-amd64\* C:\S3BucketFerry -Recurse -Force
+Copy-Item $env:TEMP\s3bf\s3bucketferry-0.4.2-windows-amd64\* C:\S3BucketFerry -Recurse -Force
 cd C:\S3BucketFerry
 .\s3bucketferry.exe version
 .\s3bucketferry.exe doctor
@@ -1098,6 +1098,38 @@ a build from source), the page links to the guide on GitHub instead.
 
 ## 8. Migrate with the web interface
 
+The migration tasks are numbered steps, shown as tabs at the top of each task
+page: **1 Scan, 2 Migrate, 3 Verify, 4 Cutover, 5 Certificate**. The tabs carry
+the source and target you have chosen, so the next step opens with the same
+buckets. **Cleanup** sits apart on the right: it is not part of the flow and
+carries nothing.
+
+When a task finishes, its page (and its job's page) shows **Next step** with
+the usual follow-up, keeping the same buckets and settings:
+
+| Finished task | Next step offered |
+|---|---|
+| Scan | Migrate this bucket (dry run) |
+| Migrate, dry run | Run the migration for real |
+| Migrate | Verify · Cutover (dry run first) · Migrate again |
+| Migrate with failures | Migrate again (copies what is missing) |
+| Verify, no differences | Cutover (dry run first) · Issue a certificate |
+| Verify with differences | Migrate again (copies what differs) · Verify again |
+| Cutover, dry run | Run the cutover for real |
+| Cutover / Certificate | Open the certificate |
+
+The step you open is a form, filled in: check it and select its button. A
+link never ticks the confirmation for **Mirror deletes**; you tick that
+yourself.
+
+While anything runs, every page shows **Running now** under the top bar: each
+task with its source and target and its progress (here 17% of objects). Select
+it to open the task, where **Stop** is. Jobs started on the command line are
+listed too, marked **CLI**, and open their job page. The number beside
+**Activity** in the menu counts them.
+
+![Running now on the Verify page, and the numbered steps carrying the buckets](images/42-running-and-steps.png)
+
 ### 8.1 Scan the source
 
 **Migration > Scan**. Choose the source profile. The page then lists the
@@ -1115,16 +1147,16 @@ certificate or region problem with a hint. You can always type the bucket
 name instead.
 
 The scan counts the objects and adds up their size. Nothing is copied. When
-it has finished, its task page (and its job page) has **Migrate this
-bucket**. It opens **Migrate** with the scanned profile and bucket
-already filled in as the source; choose the target and continue with the
-dry run below.
+it has finished, its page shows **Next step: Migrate this bucket**. It opens
+**Migrate** with the scanned profile and bucket filled in as the source and
+**Dry run** ticked; choose the target and continue with the dry run below.
 
-![A finished scan: object count and size, and Migrate this bucket](images/40-scan-migrate-button.png)
+![A finished scan: object count and size, and Next step: Migrate this bucket](images/40-scan-migrate-button.png)
 
 ### 8.2 Dry run
 
-**Migration > Migrate**. Fill in the form and leave **Dry run** ticked:
+**Migration > Migrate** (or **2 Migrate**, or **Migrate this bucket** after the
+scan). Fill in the form and leave **Dry run** ticked:
 
 ![The Migrate form, with numbered fields](images/08-migrate-form.png)
 
@@ -1167,8 +1199,10 @@ spreadsheet.
 
 ### 8.4 First copy
 
-Open **Migrate** again, fill in the same source and target, **untick Dry run**,
-and select **Start migration**.
+After the dry run, select **Next step: Run the migration for real**. It opens
+**Migrate** with the same source, target and settings, and **Dry run**
+unticked; select **Start migration**. (Or open **Migrate** yourself, fill in
+the same source and target, and untick **Dry run**.)
 
 While it runs, the task page shows a live status panel. It refreshes every 3
 seconds; you can close the browser and come back, because the task keeps
@@ -1180,6 +1214,11 @@ Section 10 explains every number. When the copy finishes, S3BucketFerry
 compares source and target automatically. The job page then shows the result:
 
 ![Integrity check after the copy: PASSED](images/17b-integrity-check.png)
+
+When it has finished, **Next step** offers **Verify**, **Cutover (dry run
+first)** and **Migrate again**:
+
+![Next step after a migration](images/43-next-steps.png)
 
 **Stop** on the task page ends a running task. Objects already copied stay on
 the target, and **Resume** on the job's page continues where it stopped (see
@@ -1210,7 +1249,8 @@ have no comparable checksum.
 ### 8.7 Preview the cutover
 
 When you are ready to switch over, **stop all writes to the source bucket**.
-Then open **Migration > Cutover**. **Dry run** is ticked by default.
+Then open **Migration > Cutover** (or **Next step: Cutover (dry run first)**
+after a migration or a verification). **Dry run** is ticked by default.
 
 Tick **Mirror deletes** under **Advanced options** if the target must end up an
 exact copy, including removing objects that were deleted from the source
@@ -1221,8 +1261,10 @@ because nothing is deleted.
 
 ### 8.8 Cutover
 
-Open **Cutover** again, **untick Dry run**, and, if you use Mirror deletes, tick
-**I understand that mirror deletes removes objects from the target**:
+Select **Next step: Run the cutover for real** on the dry run's page (or open
+**Cutover** again and untick **Dry run**). If you use Mirror deletes, tick **I
+understand that mirror deletes removes objects from the target**: a link
+never ticks it for you.
 
 ![The Cutover form for the real run](images/24-cutover-real-form.png)
 
@@ -1871,7 +1913,7 @@ upgrade.
 
 ```bash
 s3bucketferry version                                           # what you have now
-sudo s3bucketferry upgrade --package /tmp/s3bucketferry-0.4.1-linux-amd64.tar.gz
+sudo s3bucketferry upgrade --package /tmp/s3bucketferry-0.4.2-linux-amd64.tar.gz
 ```
 
 It works exactly like the online upgrade (13.3): it checks the package against
@@ -1910,9 +1952,9 @@ the copy is complete and unaltered.
 
 ```bash
 cd /tmp
-tar -xzf s3bucketferry-0.4.1-linux-amd64.tar.gz
-sudo bash s3bucketferry-0.4.1-linux-amd64/upgrade.sh --dir /opt/s3bucketferry \
-     --package /tmp/s3bucketferry-0.4.1-linux-amd64.tar.gz
+tar -xzf s3bucketferry-0.4.2-linux-amd64.tar.gz
+sudo bash s3bucketferry-0.4.2-linux-amd64/upgrade.sh --dir /opt/s3bucketferry \
+     --package /tmp/s3bucketferry-0.4.2-linux-amd64.tar.gz
 ```
 
 From then on use `sudo s3bucketferry upgrade --package ...`.
@@ -1929,7 +1971,7 @@ instead of downloaded. In PowerShell:
 
 ```powershell
 cd D:\                                                     # the folder with the copied files
-(Get-FileHash .\s3bucketferry-0.4.1-windows-amd64.zip -Algorithm SHA256).Hash.ToLower()
+(Get-FileHash .\s3bucketferry-0.4.2-windows-amd64.zip -Algorithm SHA256).Hash.ToLower()
 Select-String -Path .\SHA256SUMS.txt -Pattern "windows-amd64.zip"   # must show the same value
 ```
 
@@ -1938,8 +1980,8 @@ Stop the web interface (Ctrl+C in its window), then:
 ```powershell
 Remove-Item C:\S3BucketFerry.previous -Recurse -Force -ErrorAction SilentlyContinue
 Copy-Item C:\S3BucketFerry C:\S3BucketFerry.previous -Recurse           # your rollback copy
-Expand-Archive .\s3bucketferry-0.4.1-windows-amd64.zip -DestinationPath $env:TEMP\s3bf -Force
-Copy-Item $env:TEMP\s3bf\s3bucketferry-0.4.1-windows-amd64\* C:\S3BucketFerry -Recurse -Force
+Expand-Archive .\s3bucketferry-0.4.2-windows-amd64.zip -DestinationPath $env:TEMP\s3bf -Force
+Copy-Item $env:TEMP\s3bf\s3bucketferry-0.4.2-windows-amd64\* C:\S3BucketFerry -Recurse -Force
 C:\S3BucketFerry\s3bucketferry.exe version
 ```
 

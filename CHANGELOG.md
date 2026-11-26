@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.4.2 - 2026-11-26
+
+- **The migration tasks are connected steps.** The task tabs are numbered
+  1 Scan, 2 Migrate, 3 Verify, 4 Cutover, 5 Certificate and carry the source and
+  target chosen in the form (updated as you change them), so the next step
+  opens with the same buckets. Cleanup is set apart and carries nothing.
+- **Next step after every finished task and job**: Scan -> Migrate this bucket
+  (dry run); dry run -> Run the migration for real; migrate -> Verify, Cutover
+  (dry run first), Migrate again; failures or differences -> Migrate again;
+  verify -> Cutover, Issue a certificate; cutover dry run -> Run the cutover
+  for real; cutover or certificate -> Open the certificate. Each opens the form
+  filled in with the same buckets and settings; nothing starts until you select
+  its button, and a link never ticks the Mirror deletes confirmation. Task
+  forms accept every setting in their address (`?src=...&dst=...&workers=4&
+  dry-run=off`).
+- **Running now on every page**: the tasks running (from the web interface,
+  linking to their page with Stop) and jobs started on the command line
+  (marked CLI, linking to their job page), each with its source, target and
+  progress; the menu shows their number beside Activity.
+- Fixed: the profiles page used an inline style that the page's security
+  policy blocked (a browser console error). A test now keeps inline styles
+  and scripts out of the templates.
+- User guide: section 8 opens with the steps, the next-step table and Running
+  now; 8.1, 8.2, 8.4, 8.7 and 8.8 use the new buttons; new and updated
+  screenshots. Help page updated to match.
+- Tests: next steps for every task and result, settings carried, the deletes
+  confirmation never prefilled, numbered tabs, and the Running now bar with a
+  web task, its job and a command-line job.
+
 ## 0.4.1 - 2026-11-24
 
 - **Bucket lists in the task forms.** Choosing a profile in Scan, Migrate,
